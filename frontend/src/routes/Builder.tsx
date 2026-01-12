@@ -39,6 +39,7 @@ export default function Builder() {
   const [showDiagram, setShowDiagram] = useState(true);
   const [visibleRows, setVisibleRows] = useState<PatternRow[]>([]);
   const [highlightRows, setHighlightRows] = useState<PatternRow[]>([]);
+  const [hoveredSpoke, setHoveredSpoke] = useState<string | null>(null);
 
   const handleParamsChange = useCallback(async (params: PatternRequest) => {
     setCurrentParams(params);
@@ -269,6 +270,7 @@ export default function Builder() {
                 visibleRows={highlightRows}
                 startRimHole={currentParams.startRimHole}
                 valveReference={currentParams.valveReference}
+                hoveredSpoke={hoveredSpoke}
               />
             </div>
           )}
@@ -288,6 +290,7 @@ export default function Builder() {
               printMode={printMode}
               onVisibleRowsChange={setVisibleRows}
               onHighlightRowsChange={setHighlightRows}
+              onHoverSpokeChange={setHoveredSpoke}
             />
           ) : (
             <div className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">

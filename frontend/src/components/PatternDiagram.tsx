@@ -6,6 +6,7 @@ export type PatternDiagramProps = {
   visibleRows: PatternRow[];
   startRimHole: number;
   valveReference: "right_of_valve" | "left_of_valve";
+  hoveredSpoke?: string | null;
 };
 
 const RIM_RADIUS = 160;
@@ -62,6 +63,7 @@ export default function PatternDiagram({
   visibleRows,
   startRimHole,
   valveReference,
+  hoveredSpoke,
 }: PatternDiagramProps) {
   const h = holes / 2;
   const hubStep = 360 / h;
@@ -83,7 +85,7 @@ export default function PatternDiagram({
   );
   const valveLeft = wrapHole(holes, valveRight - 1);
   const visibleSet = new Set(visibleRows.map((row) => row.order));
-  const rimLabelSet = new Set([1, valveLeft, valveRight]);
+  const rimLabelSet = new Set<number>([1, valveLeft]);
 
   return (
     <svg viewBox="-220 -220 440 440" className="w-full h-[360px]">
@@ -99,7 +101,10 @@ export default function PatternDiagram({
             : hubRawDegNDS(row.hubHole, hubStep) + hubAngleOffset
         );
         const hubX = hub.x + sideOffset;
+        const isHovered = hoveredSpoke === row.spoke;
         const isVisible = visibleSet.has(row.order);
+        const strokeOpacity = isHovered ? 1 : isVisible ? 0.85 : 0.12;
+        const strokeWidth = isHovered ? 3.5 : isVisible ? 2.4 : 1;
         return (
           <line
             key={`${row.order}-${row.side}`}
@@ -108,8 +113,8 @@ export default function PatternDiagram({
             x2={rim.x}
             y2={rim.y}
             stroke="#334155"
-            strokeOpacity={isVisible ? 0.85 : 0.12}
-            strokeWidth={isVisible ? 2.4 : 1}
+            strokeOpacity={strokeOpacity}
+            strokeWidth={strokeWidth}
           />
         );
       })}
@@ -120,7 +125,7 @@ export default function PatternDiagram({
         r={RIM_RADIUS}
         fill="none"
         stroke="#475569"
-        strokeWidth={2}
+        strokeWidth={2.2}
       />
       <circle
         cx={HUB_OFFSET}
@@ -128,7 +133,7 @@ export default function PatternDiagram({
         r={DS_FLANGE_RADIUS}
         fill="none"
         stroke="#64748b"
-        strokeWidth={1.5}
+        strokeWidth={1.6}
       />
       <circle
         cx={-HUB_OFFSET}
@@ -136,7 +141,7 @@ export default function PatternDiagram({
         r={NDS_FLANGE_RADIUS}
         fill="none"
         stroke="#94a3b8"
-        strokeWidth={1.2}
+        strokeWidth={1.3}
       />
       <circle cx={0} cy={0} r={6} fill="#0f172a" />
 
@@ -150,13 +155,19 @@ export default function PatternDiagram({
       {Array.from({ length: holes }, (_, idx) => {
         const hole = idx + 1;
         const point = pointOnCircle(RIM_RADIUS, rimAngle(holes, hole));
+        const hovered = hoveredSpoke
+          ? rows.some(
+              (row) =>
+                row.spoke === hoveredSpoke && row.rimHole === hole
+            )
+          : false;
         return (
           <circle
             key={`rim-${hole}`}
             cx={point.x}
             cy={point.y}
-            r={2.4}
-            fill="#94a3b8"
+            r={hovered ? 4.2 : 2.4}
+            fill={hovered ? "#0f172a" : "#94a3b8"}
           >
             <title>Rim hole {hole}</title>
           </circle>
@@ -173,21 +184,37 @@ export default function PatternDiagram({
           NDS_FLANGE_RADIUS,
           hubRawDegNDS(hole, hubStep) + baseAngleNDS
         );
+        const hoveredDS = hoveredSpoke
+          ? rows.some(
+              (row) =>
+                row.spoke === hoveredSpoke &&
+                row.side === "DS" &&
+                row.hubHole === hole
+            )
+          : false;
+        const hoveredNDS = hoveredSpoke
+          ? rows.some(
+              (row) =>
+                row.spoke === hoveredSpoke &&
+                row.side === "NDS" &&
+                row.hubHole === hole
+            )
+          : false;
         return (
           <g key={`hub-${hole}`}>
             <circle
               cx={dsPoint.x + HUB_OFFSET}
               cy={dsPoint.y}
-              r={3.4}
-              fill="#475569"
+              r={hoveredDS ? 4.4 : 3.4}
+              fill={hoveredDS ? "#0f172a" : "#475569"}
             >
               <title>DS hub hole {hole}</title>
             </circle>
             <circle
               cx={ndsPoint.x - HUB_OFFSET}
               cy={ndsPoint.y}
-              r={3.2}
-              fill="#64748b"
+              r={hoveredNDS ? 4.2 : 3.2}
+              fill={hoveredNDS ? "#0f172a" : "#64748b"}
             >
               <title>NDS hub hole {hole}</title>
             </circle>
@@ -235,7 +262,8 @@ export default function PatternDiagram({
         })}
 
       {Array.from(rimLabelSet).map((hole) => {
-        const point = pointOnCircle(RIM_RADIUS + 10, rimAngle(holes, hole));
+        const offset = hole === 1 ? 18 : 12;
+        const point = pointOnCircle(RIM_RADIUS + offset, rimAngle(holes, hole));
         return (
           <text
             key={`label-${hole}`}
@@ -251,13 +279,13 @@ export default function PatternDiagram({
       })}
 
       <polygon
-        points={`0,${-RIM_RADIUS - 8} -6,${-RIM_RADIUS + 2} 6,${-RIM_RADIUS + 2}`}
+        points={`0,${-RIM_RADIUS - 10} -6,${-RIM_RADIUS + 2} 6,${-RIM_RADIUS + 2}`}
         fill="#0f172a"
       />
       <text
-        x={0}
-        y={-RIM_RADIUS - 14}
-        textAnchor="middle"
+        x={12}
+        y={-RIM_RADIUS - 16}
+        textAnchor="start"
         fontSize={10}
         fill="#0f172a"
       >

@@ -28,6 +28,7 @@ type PatternTableProps = {
   printMode: boolean;
   onVisibleRowsChange?: (rows: PatternRow[]) => void;
   onHighlightRowsChange?: (rows: PatternRow[]) => void;
+  onHoverSpokeChange?: (spoke: string | null) => void;
 };
 
 const orderedSteps = ["R1", "R2", "R3", "L1", "L3", "L4"];
@@ -60,6 +61,7 @@ export default function PatternTable({
   printMode,
   onVisibleRowsChange,
   onHighlightRowsChange,
+  onHoverSpokeChange,
 }: PatternTableProps) {
   const [sideFilter, setSideFilter] = useState("All");
   const [stepFilter, setStepFilter] = useState("All");
@@ -125,7 +127,14 @@ export default function PatternTable({
       return filteredRows;
     }
     return filteredRows.filter((row) => row.step === "R1");
-  }, [activeStep, filteredRows, highlightMode, nextStepMode, stepFilter, visibleRows]);
+  }, [
+    activeStep,
+    filteredRows,
+    highlightMode,
+    nextStepMode,
+    stepFilter,
+    visibleRows,
+  ]);
 
   useEffect(() => {
     onVisibleRowsChange?.(visibleRows);
@@ -302,7 +311,12 @@ export default function PatternTable({
             {table.getRowModel().rows.map((row) => {
               const highlight = row.original.notes.includes("Reference");
               return (
-                <tr key={row.id} className={highlight ? "bg-amber-50" : ""}>
+                <tr
+                  key={row.id}
+                  className={highlight ? "bg-amber-50" : ""}
+                  onMouseEnter={() => onHoverSpokeChange?.(row.original.spoke)}
+                  onMouseLeave={() => onHoverSpokeChange?.(null)}
+                >
                   {row.getVisibleCells().map((cell) => {
                     const sticky = stickyConfig[cell.column.id];
                     const isNotes = cell.column.id === "notes";
