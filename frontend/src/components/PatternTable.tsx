@@ -27,6 +27,7 @@ type PatternTableProps = {
   rows: PatternRow[];
   printMode: boolean;
   onVisibleRowsChange?: (rows: PatternRow[]) => void;
+  onHighlightRowsChange?: (rows: PatternRow[]) => void;
 };
 
 const orderedSteps = ["R1", "R2", "R3", "L1", "L3", "L4"];
@@ -52,15 +53,19 @@ const csvHeaders = [
   "notes",
 ];
 
+type HighlightMode = "current" | "visible";
+
 export default function PatternTable({
   rows,
   printMode,
   onVisibleRowsChange,
+  onHighlightRowsChange,
 }: PatternTableProps) {
   const [sideFilter, setSideFilter] = useState("All");
   const [stepFilter, setStepFilter] = useState("All");
   const [nextStepMode, setNextStepMode] = useState(false);
   const [activeStep, setActiveStep] = useState<string | null>(null);
+  const [highlightMode, setHighlightMode] = useState<HighlightMode>("current");
   const [sorting, setSorting] = useState<SortingState>([
     { id: "order", desc: false },
   ]);
@@ -109,9 +114,26 @@ export default function PatternTable({
     return filteredRows.filter((row) => row.step === activeStep);
   }, [filteredRows, nextStepMode, activeStep]);
 
+  const highlightRows = useMemo(() => {
+    if (highlightMode === "visible") {
+      return visibleRows;
+    }
+    if (nextStepMode && activeStep) {
+      return visibleRows;
+    }
+    if (stepFilter !== "All") {
+      return filteredRows;
+    }
+    return filteredRows.filter((row) => row.step === "R1");
+  }, [activeStep, filteredRows, highlightMode, nextStepMode, stepFilter, visibleRows]);
+
   useEffect(() => {
     onVisibleRowsChange?.(visibleRows);
   }, [onVisibleRowsChange, visibleRows]);
+
+  useEffect(() => {
+    onHighlightRowsChange?.(highlightRows);
+  }, [highlightRows, onHighlightRowsChange]);
 
   const table = useReactTable({
     data: visibleRows,
@@ -193,6 +215,23 @@ export default function PatternTable({
               )}
             </div>
           )}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-500">Highlight</span>
+          {(["current", "visible"] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setHighlightMode(mode)}
+              className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                highlightMode === mode
+                  ? "border-slate-900 bg-slate-900 text-white"
+                  : "border-slate-200 bg-white text-slate-700"
+              }`}
+            >
+              {mode === "current" ? "Current step" : "Visible rows"}
+            </button>
+          ))}
         </div>
       </div>
 

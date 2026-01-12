@@ -38,6 +38,7 @@ export default function Builder() {
   const [printMode, setPrintMode] = useState(false);
   const [showDiagram, setShowDiagram] = useState(true);
   const [visibleRows, setVisibleRows] = useState<PatternRow[]>([]);
+  const [highlightRows, setHighlightRows] = useState<PatternRow[]>([]);
 
   const handleParamsChange = useCallback(async (params: PatternRequest) => {
     setCurrentParams(params);
@@ -265,7 +266,7 @@ export default function Builder() {
               <PatternDiagram
                 holes={currentParams.holes}
                 rows={data.rows}
-                visibleRows={visibleRows}
+                visibleRows={highlightRows}
                 startRimHole={currentParams.startRimHole}
                 valveReference={currentParams.valveReference}
               />
@@ -286,6 +287,7 @@ export default function Builder() {
               rows={data.rows}
               printMode={printMode}
               onVisibleRowsChange={setVisibleRows}
+              onHighlightRowsChange={setHighlightRows}
             />
           ) : (
             <div className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">
