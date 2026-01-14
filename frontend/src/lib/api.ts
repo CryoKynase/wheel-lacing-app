@@ -5,7 +5,7 @@ import type {
   PresetSummary,
 } from "./types";
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8007";
+const API_BASE = import.meta.env.VITE_API_BASE || "";
 
 async function handleResponse(response: Response) {
   if (!response.ok) {
