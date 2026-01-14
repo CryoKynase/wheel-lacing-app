@@ -80,10 +80,11 @@ export default function Flow() {
     if (!svg) {
       return;
     }
-    const printWindow = window.open("", "_blank", "noopener,noreferrer");
+    const printWindow = window.open("", "_blank");
     if (!printWindow) {
       return;
     }
+    printWindow.opener = null;
     const html = `<!doctype html>
 <html lang="en">
   <head>
@@ -92,18 +93,31 @@ export default function Flow() {
     <style>
       :root { color-scheme: light; }
       body { margin: 0; background: #fff; font-family: "Segoe UI", system-ui, sans-serif; }
-      .flow-wrap { padding: 12mm; }
+      .page {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 12mm;
+        box-sizing: border-box;
+      }
+      .flow-wrap {
+        width: min(1200px, 100%);
+        margin: 0 auto;
+      }
       svg { width: 100% !important; height: auto !important; display: block; }
       @media print {
         @page { size: auto; margin: 12mm; }
         body { margin: 0; }
-        .flow-wrap { padding: 0; }
+        .page { padding: 0; min-height: auto; }
       }
     </style>
   </head>
   <body>
-    <div class="flow-wrap">
-      ${svg}
+    <div class="page">
+      <div class="flow-wrap">
+        ${svg}
+      </div>
     </div>
   </body>
 </html>`;
@@ -233,7 +247,7 @@ export default function Flow() {
           )}
 
           {data ? (
-            <div className="overflow-auto rounded-md border border-slate-200 bg-white p-4 lg:max-h-[calc(100vh-320px)]">
+            <div className="overflow-auto rounded-md border border-slate-200 bg-white p-4 lg:min-h-[calc(100vh-220px)]">
               <FlowDiagram
                 params={currentParams}
                 rows={filteredRows}
