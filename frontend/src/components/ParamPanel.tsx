@@ -151,7 +151,7 @@ export default function ParamPanel({
   }, [isDesktop]);
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6" data-param-panel>
       <header className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-semibold">Parameters</h2>

@@ -15,6 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import Badge from "@/components/ui/Badge";
 import {
   Tabs,
   TabsContent,
@@ -336,6 +337,50 @@ export default function Builder({ tableColumns }: BuilderProps) {
     }
   }, [printMode]);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) {
+        return;
+      }
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      if (event.key === "/") {
+        event.preventDefault();
+        const firstField = document.querySelector<HTMLElement>(
+          "[data-param-panel] select, [data-param-panel] input"
+        );
+        firstField?.focus();
+        return;
+      }
+      if (event.key === "t") {
+        setResultsTab("table");
+        return;
+      }
+      if (event.key === "d") {
+        setResultsTab("diagram");
+        return;
+      }
+      if (event.key === "b") {
+        setResultsTab("both");
+        return;
+      }
+      if (event.key === "p") {
+        setResultsTab("table");
+        setPrintMode((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   return (
     <section className="space-y-6">
       <div className="flex items-center justify-between">
@@ -475,7 +520,7 @@ export default function Builder({ tableColumns }: BuilderProps) {
             onRetry={() => handleParamsChange(currentParams)}
           />
           {error && (
-            <Card>
+            <Card className="transition-all duration-200 ease-out">
               <CardHeader className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <CardTitle className="text-sm">Unable to compute pattern</CardTitle>
@@ -493,7 +538,7 @@ export default function Builder({ tableColumns }: BuilderProps) {
             </Card>
           )}
           {loading && !data && (
-            <Card>
+            <Card className="transition-all duration-200 ease-out">
               <CardHeader>
                 <CardTitle className="text-sm">Calculating pattern…</CardTitle>
                 <CardDescription>
@@ -538,8 +583,11 @@ export default function Builder({ tableColumns }: BuilderProps) {
                   Both
                 </TabsTrigger>
               </TabsList>
-              <TabsContent value="table">
-                <Card id="pattern-table">
+              <TabsContent
+                value="table"
+                className="transition-all duration-200 data-[state=inactive]:translate-y-1 data-[state=inactive]:opacity-0 data-[state=active]:translate-y-0 data-[state=active]:opacity-100"
+              >
+                <Card id="pattern-table" className="transition-all duration-200 ease-out">
                   <CardHeader className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <CardTitle>Pattern table</CardTitle>
@@ -595,9 +643,12 @@ export default function Builder({ tableColumns }: BuilderProps) {
                   </CardContent>
                 </Card>
               </TabsContent>
-              <TabsContent value="diagram">
+              <TabsContent
+                value="diagram"
+                className="transition-all duration-200 data-[state=inactive]:translate-y-1 data-[state=inactive]:opacity-0 data-[state=active]:translate-y-0 data-[state=active]:opacity-100"
+              >
                 {!printMode && (
-                  <Card>
+                  <Card className="transition-all duration-200 ease-out">
                     <CardHeader className="flex flex-wrap items-center justify-between gap-2">
                       <div>
                         <CardTitle>Pattern diagram</CardTitle>
@@ -605,29 +656,49 @@ export default function Builder({ tableColumns }: BuilderProps) {
                           Visual layout of the lacing sequence.
                         </CardDescription>
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 px-2 text-xs"
-                        aria-label="Jump to the pattern table"
-                        onClick={() => {
-                          setResultsTab("table");
-                          window.requestAnimationFrame(() => {
-                            document
-                              .getElementById("pattern-table")
-                              ?.scrollIntoView({
-                                behavior: "smooth",
-                                block: "start",
-                              });
-                          });
-                        }}
-                      >
-                        Jump to table
-                      </Button>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {sideFilter !== "All" && (
+                          <Badge variant="neutral">Filter: {sideFilter}</Badge>
+                        )}
+                        {hoveredSpoke && (
+                          <Badge variant="neutral">Spoke: {hoveredSpoke}</Badge>
+                        )}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          aria-label="Jump to the pattern table"
+                          onClick={() => {
+                            setResultsTab("table");
+                            window.requestAnimationFrame(() => {
+                              document
+                                .getElementById("pattern-table")
+                                ?.scrollIntoView({
+                                  behavior: "smooth",
+                                  block: "start",
+                                });
+                            });
+                          }}
+                        >
+                          Jump to table
+                        </Button>
+                      </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="mt-1 max-w-full">
+                      <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-slate-600">
+                        <span className="font-semibold text-slate-500">
+                          Legend
+                        </span>
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
+                          DS
+                        </span>
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
+                          NDS
+                        </span>
+                        <span>Hover a row in the table to highlight it here.</span>
+                      </div>
+                      <div className="mt-3 max-w-full">
                         <PatternDiagram
                           holes={currentParams.holes}
                           rows={data.rows}
@@ -641,10 +712,13 @@ export default function Builder({ tableColumns }: BuilderProps) {
                   </Card>
                 )}
               </TabsContent>
-              <TabsContent value="both">
+              <TabsContent
+                value="both"
+                className="transition-all duration-200 data-[state=inactive]:translate-y-1 data-[state=inactive]:opacity-0 data-[state=active]:translate-y-0 data-[state=active]:opacity-100"
+              >
                 <div className="space-y-6">
                   {!printMode && (
-                    <Card>
+                    <Card className="transition-all duration-200 ease-out">
                       <CardHeader className="flex flex-wrap items-center justify-between gap-2">
                         <div>
                           <CardTitle>Pattern diagram</CardTitle>
@@ -652,26 +726,48 @@ export default function Builder({ tableColumns }: BuilderProps) {
                             Visual layout of the lacing sequence.
                           </CardDescription>
                         </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2 text-xs"
-                          aria-label="Jump to the pattern table"
-                          onClick={() =>
-                            document
-                              .getElementById("pattern-table-both")
-                              ?.scrollIntoView({
-                                behavior: "smooth",
-                                block: "start",
-                              })
-                          }
-                        >
-                          Jump to table
-                        </Button>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {sideFilter !== "All" && (
+                            <Badge variant="neutral">Filter: {sideFilter}</Badge>
+                          )}
+                          {hoveredSpoke && (
+                            <Badge variant="neutral">Spoke: {hoveredSpoke}</Badge>
+                          )}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            aria-label="Jump to the pattern table"
+                            onClick={() =>
+                              document
+                                .getElementById("pattern-table-both")
+                                ?.scrollIntoView({
+                                  behavior: "smooth",
+                                  block: "start",
+                                })
+                            }
+                          >
+                            Jump to table
+                          </Button>
+                        </div>
                       </CardHeader>
                       <CardContent>
-                        <div className="mt-1 max-w-full">
+                        <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-slate-600">
+                          <span className="font-semibold text-slate-500">
+                            Legend
+                          </span>
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
+                            DS
+                          </span>
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
+                            NDS
+                          </span>
+                          <span>
+                            Hover a row in the table to highlight it here.
+                          </span>
+                        </div>
+                        <div className="mt-3 max-w-full">
                           <PatternDiagram
                             holes={currentParams.holes}
                             rows={data.rows}
@@ -684,7 +780,7 @@ export default function Builder({ tableColumns }: BuilderProps) {
                       </CardContent>
                     </Card>
                   )}
-                  <Card id="pattern-table-both">
+                  <Card id="pattern-table-both" className="transition-all duration-200 ease-out">
                     <CardHeader className="flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <CardTitle>Pattern table</CardTitle>
