@@ -72,6 +72,8 @@ export default function Builder({ tableColumns }: BuilderProps) {
   const [currentParams, setCurrentParams] = useState<PatternRequest>(() =>
     normalizeParamsForHoles(defaultPatternRequest, holes)
   );
+  const [activePresetParams, setActivePresetParams] =
+    useState<PatternRequest | null>(null);
   const [seedValues, setSeedValues] = useState<PatternRequest>(() =>
     normalizeParamsForHoles(defaultPatternRequest, holes)
   );
@@ -147,6 +149,7 @@ export default function Builder({ tableColumns }: BuilderProps) {
     async (id: string | null) => {
       setSelectedPresetId(id);
       if (!id) {
+        setActivePresetParams(null);
         return;
       }
       setPresetBusy(true);
@@ -154,6 +157,7 @@ export default function Builder({ tableColumns }: BuilderProps) {
       try {
         const preset = await getPreset(id);
         setSeedValues(preset.params);
+        setActivePresetParams(preset.params);
         if (preset.params.holes !== holes) {
           navigate(`/builder/${preset.params.holes}`);
         }
@@ -177,6 +181,7 @@ export default function Builder({ tableColumns }: BuilderProps) {
       const created = await createPreset(name, currentParams);
       await refreshPresets();
       setSelectedPresetId(created.id);
+      setActivePresetParams(created.params);
     } catch (err) {
       setPresetError(err instanceof Error ? err.message : "Unexpected error");
     } finally {
@@ -193,6 +198,7 @@ export default function Builder({ tableColumns }: BuilderProps) {
     try {
       await updatePreset(selectedPresetId, undefined, currentParams);
       await refreshPresets();
+      setActivePresetParams(currentParams);
     } catch (err) {
       setPresetError(err instanceof Error ? err.message : "Unexpected error");
     } finally {
@@ -213,6 +219,7 @@ export default function Builder({ tableColumns }: BuilderProps) {
     try {
       await deletePreset(selectedPresetId);
       setSelectedPresetId(null);
+      setActivePresetParams(null);
       await refreshPresets();
     } catch (err) {
       setPresetError(err instanceof Error ? err.message : "Unexpected error");
@@ -272,6 +279,8 @@ export default function Builder({ tableColumns }: BuilderProps) {
                     <PresetBar
                       presets={presets}
                       selectedPresetId={selectedPresetId}
+                      currentParams={currentParams}
+                      activePresetParams={activePresetParams}
                       onSelect={handleSelectPreset}
                       onSaveAs={handleSaveAs}
                       onUpdate={handleUpdate}
@@ -300,6 +309,8 @@ export default function Builder({ tableColumns }: BuilderProps) {
                   <PresetBar
                     presets={presets}
                     selectedPresetId={selectedPresetId}
+                    currentParams={currentParams}
+                    activePresetParams={activePresetParams}
                     onSelect={handleSelectPreset}
                     onSaveAs={handleSaveAs}
                     onUpdate={handleUpdate}
