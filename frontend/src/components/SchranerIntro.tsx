@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 
 const STORAGE_KEY = "schranerIntroExpanded";
 
@@ -29,10 +30,11 @@ export default function SchranerIntro() {
   return (
     <section className="rounded-lg border border-slate-200 bg-white px-4 py-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <button
+        <Button
           type="button"
           onClick={toggle}
-          className="text-left"
+          variant="ghost"
+          className="h-auto w-full justify-start p-0 text-left hover:bg-transparent"
           aria-expanded={expanded}
           aria-controls={contentId}
         >
@@ -43,11 +45,13 @@ export default function SchranerIntro() {
             Anchor the build at the valve with two reference spokes, then lace in
             a fixed sequence (R1 to R2 to R3 to L1 to L3 to L4).
           </p>
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           onClick={toggle}
-          className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+          variant="outline"
+          size="sm"
+          className="h-7 gap-1 px-2"
           aria-expanded={expanded}
           aria-controls={contentId}
         >
@@ -57,7 +61,7 @@ export default function SchranerIntro() {
           ) : (
             <ChevronDown className="h-3.5 w-3.5" />
           )}
-        </button>
+        </Button>
       </div>
       <div
         id={contentId}

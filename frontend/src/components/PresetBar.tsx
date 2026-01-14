@@ -102,13 +102,19 @@ export default function PresetBar({
     setDeleteOpen(false);
   };
 
+  const hasActivePreset = Boolean(selectedPresetId);
+
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3">
+    <div
+      className={`flex flex-wrap items-center gap-3 rounded-lg border bg-background px-4 py-3 ${
+        hasActivePreset ? "border-l-4 border-l-primary/40 border-border" : "border-border"
+      }`}
+    >
       <div className="flex-1">
         <div className="flex flex-wrap items-center gap-2">
           {activeLabel ? (
             <>
-              <Badge variant="neutral">
+              <Badge variant="neutral" className="bg-primary/10 text-foreground">
                 <span className="max-w-[200px] truncate">
                   Active preset: {activeLabel}
                 </span>
@@ -145,7 +151,7 @@ export default function PresetBar({
           </label>
         </div>
         <select
-          className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+          className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 hover:bg-accent/40"
           value={selectedPresetId ?? ""}
           onChange={(event) =>
             onSelect(event.target.value ? event.target.value : null)

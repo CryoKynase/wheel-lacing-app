@@ -564,21 +564,21 @@ export default function Builder({ tableColumns }: BuilderProps) {
               <TabsList className="flex flex-wrap gap-2 bg-transparent p-0">
                 <TabsTrigger
                   value="table"
-                  className="rounded-md border border-border bg-background text-xs font-semibold text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground data-[state=active]:border-primary/50 data-[state=active]:bg-primary/10 data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                  className="rounded-md border border-border bg-background text-xs font-semibold text-muted-foreground transition-colors hover:bg-accent/40 hover:border-primary/30 hover:text-foreground data-[state=active]:border-primary/40 data-[state=active]:bg-primary/10 data-[state=active]:text-foreground data-[state=active]:shadow-none"
                 >
                   Table
                 </TabsTrigger>
                 <TabsTrigger
                   value="diagram"
                   disabled={printMode}
-                  className="rounded-md border border-border bg-background text-xs font-semibold text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground data-[state=active]:border-primary/50 data-[state=active]:bg-primary/10 data-[state=active]:text-foreground data-[state=active]:shadow-none data-[disabled]:opacity-50 data-[disabled]:pointer-events-none"
+                  className="rounded-md border border-border bg-background text-xs font-semibold text-muted-foreground transition-colors hover:bg-accent/40 hover:border-primary/30 hover:text-foreground data-[state=active]:border-primary/40 data-[state=active]:bg-primary/10 data-[state=active]:text-foreground data-[state=active]:shadow-none data-[disabled]:opacity-50 data-[disabled]:pointer-events-none"
                 >
                   Diagram
                 </TabsTrigger>
                 <TabsTrigger
                   value="both"
                   disabled={printMode}
-                  className="rounded-md border border-border bg-background text-xs font-semibold text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground data-[state=active]:border-primary/50 data-[state=active]:bg-primary/10 data-[state=active]:text-foreground data-[state=active]:shadow-none data-[disabled]:opacity-50 data-[disabled]:pointer-events-none"
+                  className="rounded-md border border-border bg-background text-xs font-semibold text-muted-foreground transition-colors hover:bg-accent/40 hover:border-primary/30 hover:text-foreground data-[state=active]:border-primary/40 data-[state=active]:bg-primary/10 data-[state=active]:text-foreground data-[state=active]:shadow-none data-[disabled]:opacity-50 data-[disabled]:pointer-events-none"
                 >
                   Both
                 </TabsTrigger>
@@ -587,14 +587,17 @@ export default function Builder({ tableColumns }: BuilderProps) {
                 value="table"
                 className="transition-all duration-200 data-[state=inactive]:translate-y-1 data-[state=inactive]:opacity-0 data-[state=active]:translate-y-0 data-[state=active]:opacity-100"
               >
-                <Card id="pattern-table" className="transition-all duration-200 ease-out">
+                <Card
+                  id="pattern-table"
+                  className="border-l-4 border-l-primary/40 transition-all duration-200 ease-out"
+                >
                   <CardHeader className="flex items-center justify-between gap-3 border-b border-border bg-muted/40 py-2">
                     <div className="text-xs font-semibold uppercase text-slate-500">
                       Table
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" className="hover:text-primary">
                           Actions
                         </Button>
                       </DropdownMenuTrigger>
@@ -645,7 +648,7 @@ export default function Builder({ tableColumns }: BuilderProps) {
                 className="transition-all duration-200 data-[state=inactive]:translate-y-1 data-[state=inactive]:opacity-0 data-[state=active]:translate-y-0 data-[state=active]:opacity-100"
               >
                 {!printMode && (
-                  <Card className="transition-all duration-200 ease-out">
+                  <Card className="border-l-4 border-l-primary/40 transition-all duration-200 ease-out">
                     <CardHeader className="flex items-center justify-between gap-2 border-b border-border bg-muted/40 py-2">
                       <div className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-500">
                         Diagram
@@ -718,7 +721,7 @@ export default function Builder({ tableColumns }: BuilderProps) {
               >
                 <div className="space-y-3">
                   {!printMode && (
-                    <Card className="transition-all duration-200 ease-out">
+                    <Card className="border-l-4 border-l-primary/40 transition-all duration-200 ease-out">
                       <CardHeader className="flex items-center justify-between gap-2 border-b border-border bg-muted/40 py-2">
                         <div className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-500">
                           Diagram
@@ -781,14 +784,17 @@ export default function Builder({ tableColumns }: BuilderProps) {
                       </CardContent>
                     </Card>
                   )}
-                  <Card id="pattern-table-both" className="transition-all duration-200 ease-out">
+                  <Card
+                    id="pattern-table-both"
+                    className="border-l-4 border-l-primary/40 transition-all duration-200 ease-out"
+                  >
                     <CardHeader className="flex items-center justify-between gap-3 border-b border-border bg-muted/40 py-2">
                       <div className="text-xs font-semibold uppercase text-slate-500">
                         Table
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" className="hover:text-primary">
                             Actions
                           </Button>
                         </DropdownMenuTrigger>

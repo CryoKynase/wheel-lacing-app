@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Button } from "@/components/ui/Button";
 
 export type ComputeStatusProps = {
   loading: boolean;
@@ -20,8 +21,8 @@ export default function ComputeStatus({
 }: ComputeStatusProps) {
   if (loading) {
     return (
-      <div className={`flex items-center gap-2 text-sm text-slate-600 ${className}`}>
-        <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
+      <div className={`flex items-center gap-2 text-sm text-muted-foreground ${className}`}>
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-border border-t-foreground/70" />
         Loading pattern...
       </div>
     );
@@ -34,13 +35,15 @@ export default function ComputeStatus({
       >
         <span>{error}</span>
         {onRetry && (
-          <button
+          <Button
             type="button"
             onClick={onRetry}
-            className="rounded-md border border-rose-200 bg-white px-3 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-100"
+            variant="outline"
+            size="sm"
+            className="h-7 border-destructive/40 text-destructive hover:text-destructive"
           >
             Retry
-          </button>
+          </Button>
         )}
       </div>
     );
@@ -51,7 +54,7 @@ export default function ComputeStatus({
       ? lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
       : null;
     return (
-      <div className={`text-xs text-slate-500 ${className}`}>
+      <div className={`text-xs text-muted-foreground ${className}`}>
         {time ? `Updated ${time} · ` : ""}{rowCount} rows
       </div>
     );

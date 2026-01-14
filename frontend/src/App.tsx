@@ -23,7 +23,7 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   `${linkBase} ${
     isActive
       ? "border-primary/30 bg-primary/10 text-foreground"
-      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+      : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
   }`;
 
 export default function App() {

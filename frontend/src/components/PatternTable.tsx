@@ -6,6 +6,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+import { Button } from "@/components/ui/Button";
 
 import type { PatternRow } from "../lib/types";
 import type { TableColumnVisibility } from "../lib/tableSettings";
@@ -345,102 +346,116 @@ export default function PatternTable({
 
   return (
     <section className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 no-print">
-        <div className="flex flex-wrap items-center gap-2">
-          {!printMode && (
-            <>
-              <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white p-1">
-                {(["table", "lookup"] as const).map((mode) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    onClick={() => {
-                      setManualDisplayMode(true);
-                      setDisplayMode(mode);
-                    }}
-                    className={`rounded-full px-3 py-1 text-xs font-medium ${
-                      displayMode === mode
-                        ? "bg-slate-900 text-white"
-                        : "text-slate-700"
-                    }`}
-                  >
-                    {mode === "table" ? "Full table" : "Compact lookup"}
-                  </button>
-                ))}
-              </div>
-              {displayMode === "table" && (
-                <>
-                  <button
-                    type="button"
-                    onClick={handleExport}
-                    className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-medium hover:bg-slate-50"
-                  >
-                    Export CSV
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setNextStepMode((prev) => !prev)}
-                    className={`rounded-md border px-3 py-2 text-xs font-medium ${
-                      nextStepMode
-                        ? "border-slate-900 bg-slate-900 text-white"
-                        : "border-slate-300 bg-white text-slate-700"
-                    }`}
-                  >
-                    Next step mode
-                  </button>
-                  {nextStepMode && (
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setActiveStep(availableSteps[stepIndex - 1])}
-                        disabled={stepIndex <= 0}
-                        className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-medium disabled:opacity-50"
-                      >
-                        Prev step
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setActiveStep(availableSteps[stepIndex + 1])
-                        }
-                        disabled={
-                          stepIndex < 0 || stepIndex >= availableSteps.length - 1
-                        }
-                        className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-medium disabled:opacity-50"
-                      >
-                        Next step
-                      </button>
-                      {activeStep && (
-                        <span className="text-xs text-slate-500">
-                          Showing {activeStep}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </>
-              )}
-            </>
+      <div className="rounded-md border border-border bg-muted/30 px-3 py-2 no-print">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-b-primary/30 pb-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {!printMode && (
+              <>
+                <div className="flex items-center gap-2 rounded-full border border-border bg-background p-1">
+                  {(["table", "lookup"] as const).map((mode) => (
+                    <Button
+                      key={mode}
+                      type="button"
+                      onClick={() => {
+                        setManualDisplayMode(true);
+                        setDisplayMode(mode);
+                      }}
+                      variant="ghost"
+                      size="sm"
+                      className={`h-7 rounded-full px-3 text-xs font-medium ${
+                        displayMode === mode
+                          ? "bg-primary/10 text-foreground"
+                          : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
+                      }`}
+                    >
+                      {mode === "table" ? "Full table" : "Compact lookup"}
+                    </Button>
+                  ))}
+                </div>
+                {displayMode === "table" && (
+                  <>
+                    <Button
+                      type="button"
+                      onClick={handleExport}
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs"
+                    >
+                      Export CSV
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => setNextStepMode((prev) => !prev)}
+                      variant="outline"
+                      size="sm"
+                      className={`h-7 text-xs ${
+                        nextStepMode
+                          ? "border-primary/40 bg-primary/10 text-foreground"
+                          : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
+                      }`}
+                    >
+                      Next step mode
+                    </Button>
+                    {nextStepMode && (
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          onClick={() => setActiveStep(availableSteps[stepIndex - 1])}
+                          disabled={stepIndex <= 0}
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs"
+                        >
+                          Prev step
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() =>
+                            setActiveStep(availableSteps[stepIndex + 1])
+                          }
+                          disabled={
+                            stepIndex < 0 || stepIndex >= availableSteps.length - 1
+                          }
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs"
+                        >
+                          Next step
+                        </Button>
+                        {activeStep && (
+                          <span className="text-xs text-slate-500">
+                            Showing {activeStep}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+              </>
+            )}
+          </div>
+          {displayMode === "table" && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500">Highlight</span>
+              {(["current", "visible"] as const).map((mode) => (
+                <Button
+                  key={mode}
+                  type="button"
+                  onClick={() => setHighlightMode(mode)}
+                  variant="outline"
+                  size="sm"
+                  className={`h-7 rounded-full px-3 text-xs font-medium ${
+                    highlightMode === mode
+                      ? "border-primary/40 bg-primary/10 text-foreground"
+                      : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
+                  }`}
+                >
+                  {mode === "current" ? "Current step" : "Visible rows"}
+                </Button>
+              ))}
+            </div>
           )}
         </div>
-        {displayMode === "table" && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500">Highlight</span>
-            {(["current", "visible"] as const).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => setHighlightMode(mode)}
-                className={`rounded-full border px-3 py-1 text-xs font-medium ${
-                  highlightMode === mode
-                    ? "border-slate-900 bg-slate-900 text-white"
-                    : "border-slate-200 bg-white text-slate-700"
-                }`}
-              >
-                {mode === "current" ? "Current step" : "Visible rows"}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       {displayMode === "table" && (
@@ -448,18 +463,20 @@ export default function PatternTable({
           <div className="flex flex-wrap items-center gap-3 no-print">
             <div className="flex items-center gap-2">
               {stepOptions.map((step) => (
-                <button
+                <Button
                   key={step}
-                  className={`rounded-full border px-3 py-1 text-xs font-medium ${
-                    stepFilter === step
-                      ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-200 bg-white text-slate-700"
-                  }`}
                   onClick={() => setStepFilter(step)}
                   type="button"
+                  variant="outline"
+                  size="sm"
+                  className={`h-7 rounded-full px-3 text-xs font-medium ${
+                    stepFilter === step
+                      ? "border-primary/40 bg-primary/10 text-foreground"
+                      : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
+                  }`}
                 >
                   {step}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -468,7 +485,7 @@ export default function PatternTable({
             <table
               className={`w-full min-w-[720px] text-left ${printMode ? "text-sm" : "text-xs"}`}
             >
-              <thead className="sticky top-0 z-10 bg-slate-100 text-[11px] uppercase tracking-wide text-slate-600">
+              <thead className="sticky top-0 z-10 bg-muted/50 text-[11px] uppercase tracking-wide text-muted-foreground">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <tr key={headerGroup.id}>
                     {headerGroup.headers.map((header) => {
@@ -476,8 +493,8 @@ export default function PatternTable({
                       return (
                         <th
                           key={header.id}
-                          className={`whitespace-nowrap border-b border-slate-200 px-3 py-2 ${
-                            sticky ? "sticky z-20 bg-slate-100" : ""
+                          className={`whitespace-nowrap border-b border-border px-3 py-2 ${
+                            sticky ? "sticky z-20 bg-muted/50" : ""
                           }`}
                           style={
                             sticky
@@ -540,30 +557,34 @@ export default function PatternTable({
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
               {(["DS", "NDS"] as const).map((side) => (
-                <button
+                <Button
                   key={side}
                   type="button"
                   onClick={() => setLookupSide(side)}
-                  className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                  variant="outline"
+                  size="sm"
+                  className={`h-7 rounded-full px-3 text-xs font-medium ${
                     lookupSide === side
-                      ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-200 bg-white text-slate-700"
+                      ? "border-primary/40 bg-primary/10 text-foreground"
+                      : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
                   }`}
                 >
                   {side}
-                </button>
+                </Button>
               ))}
             </div>
             <div className="flex items-center gap-2">
               {(["rim", "hub", "search"] as const).map((type) => (
-                <button
+                <Button
                   key={type}
                   type="button"
                   onClick={() => setLookupType(type)}
-                  className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                  variant="outline"
+                  size="sm"
+                  className={`h-7 rounded-full px-3 text-xs font-medium ${
                     lookupType === type
-                      ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-200 bg-white text-slate-700"
+                      ? "border-primary/40 bg-primary/10 text-foreground"
+                      : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
                   }`}
                 >
                   {type === "rim"
@@ -571,7 +592,7 @@ export default function PatternTable({
                     : type === "hub"
                       ? "Hub hole"
                       : "Spoke/Order"}
-                </button>
+                </Button>
               ))}
             </div>
             {lookupType === "search" ? (

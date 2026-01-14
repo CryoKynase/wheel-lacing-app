@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { LayoutGrid, LayoutList, SquareSplitHorizontal } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 
 const options = [
   { value: "table", label: "Table", Icon: LayoutList },
@@ -27,27 +28,29 @@ export default function Segmented({
   return (
     <div className={`inline-flex items-center gap-2 ${className}`}>
       {label && (
-        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {label}
         </span>
       )}
-      <div className="inline-flex rounded-md border border-slate-200 bg-white p-1">
+      <div className="inline-flex rounded-md border border-border bg-background p-1">
         {options.map(({ value: option, label: optionLabel, Icon }) => {
           const active = option === value;
           return (
-            <button
+            <Button
               key={option}
               type="button"
               onClick={() => onChange(option)}
+              variant="ghost"
+              size="sm"
               className={`inline-flex items-center gap-2 rounded px-3 py-1.5 text-xs font-semibold transition ${
                 active
-                  ? "bg-slate-900 text-white"
-                  : "text-slate-600 hover:bg-slate-100"
+                  ? "bg-primary/10 text-foreground"
+                  : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
               }`}
             >
               {showIcons && <Icon className="h-3.5 w-3.5" />}
               {optionLabel}
-            </button>
+            </Button>
           );
         })}
       </div>

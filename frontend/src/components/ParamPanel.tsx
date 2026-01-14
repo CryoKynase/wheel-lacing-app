@@ -17,6 +17,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/Button";
 import { Info } from "lucide-react";
 
 const schema = z.object({
@@ -175,7 +176,7 @@ export default function ParamPanel({
             <label className="block">
               <span className="text-sm font-medium">Wheel type</span>
               <select
-                className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 {...register("wheelType")}
               >
                 <option value="rear">Rear</option>
@@ -186,7 +187,7 @@ export default function ParamPanel({
             <label className="block">
               <span className="text-sm font-medium">Crosses</span>
               <select
-                className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 {...register("crosses", { valueAsNumber: true })}
               >
                 {crossOptions.map((opt) => (
@@ -206,7 +207,7 @@ export default function ParamPanel({
             <label className="block">
               <span className="text-sm font-medium">Symmetry</span>
               <select
-                className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 {...register("symmetry")}
               >
                 <option value="symmetrical">Symmetrical</option>
@@ -214,7 +215,7 @@ export default function ParamPanel({
               </select>
             </label>
 
-            <label className="flex items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2">
+            <label className="flex items-center justify-between rounded-md border border-border bg-background px-3 py-2">
               <span className="text-sm font-medium">Invert heads</span>
               <input type="checkbox" {...register("invertHeads")} />
             </label>
@@ -229,13 +230,15 @@ export default function ParamPanel({
                 Start rim hole
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <button
+                    <Button
                       type="button"
-                      className="text-slate-500 hover:text-slate-700"
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-muted-foreground hover:text-primary"
                       aria-label="Start rim hole help"
                     >
                       <Info className="h-4 w-4" />
-                    </button>
+                    </Button>
                   </TooltipTrigger>
                   <TooltipContent>
                     Pick the rim hole where you want to begin lacing.
@@ -246,7 +249,7 @@ export default function ParamPanel({
                 type="number"
                 min={1}
                 max={holes}
-                className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 {...register("startRimHole", { valueAsNumber: true })}
               />
               {rimHoleHint && (
@@ -259,13 +262,15 @@ export default function ParamPanel({
                 Start hub hole (DS)
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <button
+                    <Button
                       type="button"
-                      className="text-slate-500 hover:text-slate-700"
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-muted-foreground hover:text-primary"
                       aria-label="Start hub hole DS help"
                     >
                       <Info className="h-4 w-4" />
-                    </button>
+                    </Button>
                   </TooltipTrigger>
                   <TooltipContent>
                     Choose the starting hole on the drive-side flange.
@@ -276,7 +281,7 @@ export default function ParamPanel({
                 type="number"
                 min={1}
                 max={h}
-                className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 {...register("startHubHoleDS", { valueAsNumber: true })}
               />
               <p className="mt-1 text-xs text-slate-500">
@@ -289,13 +294,15 @@ export default function ParamPanel({
                 Start hub hole (NDS)
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <button
+                    <Button
                       type="button"
-                      className="text-slate-500 hover:text-slate-700"
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-muted-foreground hover:text-primary"
                       aria-label="Start hub hole NDS help"
                     >
                       <Info className="h-4 w-4" />
-                    </button>
+                    </Button>
                   </TooltipTrigger>
                   <TooltipContent>
                     Choose the starting hole on the non-drive flange.
@@ -306,7 +313,7 @@ export default function ParamPanel({
                 type="number"
                 min={1}
                 max={h}
-                className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 {...register("startHubHoleNDS", { valueAsNumber: true })}
               />
               <p className="mt-1 text-xs text-slate-500">
@@ -324,13 +331,15 @@ export default function ParamPanel({
                 Valve reference
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <button
+                    <Button
                       type="button"
-                      className="text-slate-500 hover:text-slate-700"
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-muted-foreground hover:text-primary"
                       aria-label="Valve reference help"
                     >
                       <Info className="h-4 w-4" />
-                    </button>
+                    </Button>
                   </TooltipTrigger>
                   <TooltipContent>
                     Pick which side of the valve your first spoke should pass.
@@ -338,7 +347,7 @@ export default function ParamPanel({
                 </Tooltip>
               </span>
               <select
-                className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 {...register("valveReference")}
               >
                 <option value="right_of_valve">Right of valve</option>
@@ -370,13 +379,15 @@ export default function ParamPanel({
                 DS/NDS
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <button
+                    <Button
                       type="button"
-                      className="text-slate-500 hover:text-slate-700"
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-muted-foreground hover:text-primary"
                       aria-label="DS/NDS filter help"
                     >
                       <Info className="h-4 w-4" />
-                    </button>
+                    </Button>
                   </TooltipTrigger>
                   <TooltipContent>
                     Filter the output to one side of the wheel.
@@ -384,7 +395,7 @@ export default function ParamPanel({
                 </Tooltip>
               </span>
               <select
-                className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 value={sideFilter}
                 onChange={(event) =>
                   onSideFilterChange(event.target.value as "All" | "DS" | "NDS")
@@ -414,13 +425,14 @@ export default function ParamPanel({
         </Accordion>
       </TooltipProvider>
 
-      <button
+      <Button
         type="button"
+        variant="outline"
         onClick={() => reset(defaultPatternRequest)}
-        className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium hover:bg-slate-50"
+        className="w-full"
       >
         Reset defaults
-      </button>
+      </Button>
     </section>
   );
 }
