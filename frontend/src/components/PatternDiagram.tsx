@@ -166,7 +166,7 @@ export default function PatternDiagram({
             key={`rim-${hole}`}
             cx={point.x}
             cy={point.y}
-            r={hovered ? 4.2 : 2.4}
+            r={hovered ? 5 : 3.2}
             fill={hovered ? "#0f172a" : "#94a3b8"}
           >
             <title>Rim hole {hole}</title>
