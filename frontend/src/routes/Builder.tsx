@@ -588,12 +588,9 @@ export default function Builder({ tableColumns }: BuilderProps) {
                 className="transition-all duration-200 data-[state=inactive]:translate-y-1 data-[state=inactive]:opacity-0 data-[state=active]:translate-y-0 data-[state=active]:opacity-100"
               >
                 <Card id="pattern-table" className="transition-all duration-200 ease-out">
-                  <CardHeader className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <CardTitle>Pattern table</CardTitle>
-                      <CardDescription>
-                        Detailed spoke-by-spoke lacing order.
-                      </CardDescription>
+                  <CardHeader className="flex items-center justify-between gap-3 py-2">
+                    <div className="text-xs font-semibold uppercase text-slate-500">
+                      Table
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -625,7 +622,7 @@ export default function Builder({ tableColumns }: BuilderProps) {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </CardHeader>
-                  <CardContent className="space-y-3">
+                  <CardContent className="space-y-3 pt-2">
                     <div className="overflow-x-auto rounded-md border border-slate-200 bg-white">
                       <PatternTable
                         rows={data.rows}
@@ -649,56 +646,42 @@ export default function Builder({ tableColumns }: BuilderProps) {
               >
                 {!printMode && (
                   <Card className="transition-all duration-200 ease-out">
-                    <CardHeader className="flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <CardTitle>Pattern diagram</CardTitle>
-                        <CardDescription>
-                          Visual layout of the lacing sequence.
-                        </CardDescription>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
+                    <CardHeader className="flex items-center justify-between gap-2 py-2">
+                      <div className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-500">
+                        Diagram
                         {sideFilter !== "All" && (
                           <Badge variant="neutral">Filter: {sideFilter}</Badge>
                         )}
                         {hoveredSpoke && (
                           <Badge variant="neutral">Spoke: {hoveredSpoke}</Badge>
                         )}
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2 text-xs"
-                          aria-label="Jump to the pattern table"
-                          onClick={() => {
-                            setResultsTab("table");
-                            window.requestAnimationFrame(() => {
-                              document
-                                .getElementById("pattern-table")
-                                ?.scrollIntoView({
-                                  behavior: "smooth",
-                                  block: "start",
-                                });
-                            });
-                          }}
-                        >
-                          Jump to table
-                        </Button>
                       </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        aria-label="Jump to the pattern table"
+                        onClick={() => {
+                          setResultsTab("table");
+                          window.requestAnimationFrame(() => {
+                            document
+                              .getElementById("pattern-table")
+                              ?.scrollIntoView({
+                                behavior: "smooth",
+                                block: "start",
+                              });
+                          });
+                        }}
+                      >
+                        Jump to table
+                      </Button>
                     </CardHeader>
-                    <CardContent>
-                      <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-slate-600">
-                        <span className="font-semibold text-slate-500">
-                          Legend
-                        </span>
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
-                          DS
-                        </span>
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
-                          NDS
-                        </span>
-                        <span>Hover a row in the table to highlight it here.</span>
-                      </div>
-                      <div className="mt-3 max-w-full">
+                    <CardContent className="pt-2">
+                      <p className="text-xs text-slate-600 lg:hidden">
+                        Hover a row in the table to highlight it here.
+                      </p>
+                      <div className="mt-2 grid max-w-full gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
                         <PatternDiagram
                           holes={currentParams.holes}
                           rows={data.rows}
@@ -707,6 +690,23 @@ export default function Builder({ tableColumns }: BuilderProps) {
                           valveReference={currentParams.valveReference}
                           hoveredSpoke={hoveredSpoke}
                         />
+                        <div className="hidden space-y-3 text-xs text-slate-600 lg:block">
+                          <div className="text-[11px] font-semibold uppercase text-slate-500">
+                            How to read this
+                          </div>
+                          <p>
+                            Each line is a spoke path. Hover rows in the table to
+                            highlight them here.
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
+                              DS
+                            </span>
+                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
+                              NDS
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -716,58 +716,42 @@ export default function Builder({ tableColumns }: BuilderProps) {
                 value="both"
                 className="transition-all duration-200 data-[state=inactive]:translate-y-1 data-[state=inactive]:opacity-0 data-[state=active]:translate-y-0 data-[state=active]:opacity-100"
               >
-                <div className="space-y-6">
+                <div className="space-y-3">
                   {!printMode && (
                     <Card className="transition-all duration-200 ease-out">
-                      <CardHeader className="flex flex-wrap items-center justify-between gap-2">
-                        <div>
-                          <CardTitle>Pattern diagram</CardTitle>
-                          <CardDescription>
-                            Visual layout of the lacing sequence.
-                          </CardDescription>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
+                      <CardHeader className="flex items-center justify-between gap-2 py-2">
+                        <div className="flex items-center gap-2 text-xs font-semibold uppercase text-slate-500">
+                          Diagram
                           {sideFilter !== "All" && (
                             <Badge variant="neutral">Filter: {sideFilter}</Badge>
                           )}
                           {hoveredSpoke && (
                             <Badge variant="neutral">Spoke: {hoveredSpoke}</Badge>
                           )}
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-xs"
-                            aria-label="Jump to the pattern table"
-                            onClick={() =>
-                              document
-                                .getElementById("pattern-table-both")
-                                ?.scrollIntoView({
-                                  behavior: "smooth",
-                                  block: "start",
-                                })
-                            }
-                          >
-                            Jump to table
-                          </Button>
                         </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          aria-label="Jump to the pattern table"
+                          onClick={() =>
+                            document
+                              .getElementById("pattern-table-both")
+                              ?.scrollIntoView({
+                                behavior: "smooth",
+                                block: "start",
+                              })
+                          }
+                        >
+                          Jump to table
+                        </Button>
                       </CardHeader>
-                      <CardContent>
-                        <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-slate-600">
-                          <span className="font-semibold text-slate-500">
-                            Legend
-                          </span>
-                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
-                            DS
-                          </span>
-                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
-                            NDS
-                          </span>
-                          <span>
-                            Hover a row in the table to highlight it here.
-                          </span>
-                        </div>
-                        <div className="mt-3 max-w-full">
+                      <CardContent className="pt-2">
+                        <p className="text-xs text-slate-600 lg:hidden">
+                          Hover a row in the table to highlight it here.
+                        </p>
+                        <div className="mt-2 grid max-w-full gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
                           <PatternDiagram
                             holes={currentParams.holes}
                             rows={data.rows}
@@ -776,17 +760,31 @@ export default function Builder({ tableColumns }: BuilderProps) {
                             valveReference={currentParams.valveReference}
                             hoveredSpoke={hoveredSpoke}
                           />
+                          <div className="hidden space-y-3 text-xs text-slate-600 lg:block">
+                            <div className="text-[11px] font-semibold uppercase text-slate-500">
+                              How to read this
+                            </div>
+                            <p>
+                              Each line is a spoke path. Hover rows in the table to
+                              highlight them here.
+                            </p>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
+                                DS
+                              </span>
+                              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
+                                NDS
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
                   )}
                   <Card id="pattern-table-both" className="transition-all duration-200 ease-out">
-                    <CardHeader className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <CardTitle>Pattern table</CardTitle>
-                        <CardDescription>
-                          Detailed spoke-by-spoke lacing order.
-                        </CardDescription>
+                    <CardHeader className="flex items-center justify-between gap-3 py-2">
+                      <div className="text-xs font-semibold uppercase text-slate-500">
+                        Table
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -818,8 +816,8 @@ export default function Builder({ tableColumns }: BuilderProps) {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="overflow-x-auto rounded-md border border-slate-200 bg-white">
+                    <CardContent className="space-y-3 pt-2">
+                      <div className="overflow-auto rounded-md border border-slate-200 bg-white lg:max-h-[calc(100vh-420px)]">
                         <PatternTable
                           rows={data.rows}
                           printMode={printMode}
