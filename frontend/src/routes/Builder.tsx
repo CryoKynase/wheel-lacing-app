@@ -634,9 +634,6 @@ export default function Builder({ tableColumns }: BuilderProps) {
                         {sideFilter !== "All" && (
                           <Badge variant="neutral">Filter: {sideFilter}</Badge>
                         )}
-                        {hoveredSpoke && (
-                          <Badge variant="neutral">Spoke: {hoveredSpoke}</Badge>
-                        )}
                       </div>
                       <Button
                         type="button"
@@ -688,6 +685,9 @@ export default function Builder({ tableColumns }: BuilderProps) {
                               NDS
                             </span>
                           </div>
+                          <div className="pt-1 text-[11px] font-semibold uppercase text-slate-500">
+                            Spoke: {hoveredSpoke ?? "—"}
+                          </div>
                         </div>
                       </div>
                     </CardContent>
@@ -705,9 +705,6 @@ export default function Builder({ tableColumns }: BuilderProps) {
                         <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase text-slate-500">
                           {sideFilter !== "All" && (
                             <Badge variant="neutral">Filter: {sideFilter}</Badge>
-                          )}
-                          {hoveredSpoke && (
-                            <Badge variant="neutral">Spoke: {hoveredSpoke}</Badge>
                           )}
                         </div>
                         <Button
@@ -756,6 +753,9 @@ export default function Builder({ tableColumns }: BuilderProps) {
                               <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
                                 NDS
                               </span>
+                            </div>
+                            <div className="pt-1 text-[11px] font-semibold uppercase text-slate-500">
+                              Spoke: {hoveredSpoke ?? "—"}
                             </div>
                           </div>
                         </div>
