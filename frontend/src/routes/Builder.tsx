@@ -6,6 +6,7 @@ import PatternDiagram from "../components/PatternDiagram";
 import PatternTable from "../components/PatternTable";
 import PresetBar from "../components/PresetBar";
 import SchranerIntro from "../components/SchranerIntro";
+import { Card, CardContent } from "../components/ui/Card";
 import {
   computePattern,
   createPreset,
@@ -236,32 +237,77 @@ export default function Builder({ tableColumns }: BuilderProps) {
 
       <SchranerIntro />
 
-      <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
+      <div className="space-y-6 lg:grid lg:grid-cols-[380px_1fr] lg:gap-6 lg:space-y-0">
         {!printMode && (
-          <aside className="h-fit lg:sticky lg:top-6 no-print">
-            <ParamPanel
-              holes={holes}
-              onParamsChange={handleParamsChange}
-              initialValues={seedValues}
-              valveStatus={valveStatus ?? undefined}
-              sideFilter={sideFilter}
-              onSideFilterChange={setSideFilter}
-            />
+          <aside className="space-y-4 no-print">
+            <div className="space-y-3 lg:hidden">
+              <Card>
+                <details className="group">
+                  <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-900">
+                    Parameters
+                  </summary>
+                  <div className="px-4 pb-4">
+                    <ParamPanel
+                      holes={holes}
+                      onParamsChange={handleParamsChange}
+                      initialValues={seedValues}
+                      valveStatus={valveStatus ?? undefined}
+                      sideFilter={sideFilter}
+                      onSideFilterChange={setSideFilter}
+                    />
+                  </div>
+                </details>
+              </Card>
+              <Card>
+                <details className="group">
+                  <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-900">
+                    Presets
+                  </summary>
+                  <div className="px-4 pb-4">
+                    <PresetBar
+                      presets={presets}
+                      selectedPresetId={selectedPresetId}
+                      onSelect={handleSelectPreset}
+                      onSaveAs={handleSaveAs}
+                      onUpdate={handleUpdate}
+                      onDelete={handleDelete}
+                      busy={presetBusy}
+                    />
+                  </div>
+                </details>
+              </Card>
+            </div>
+            <div className="hidden space-y-4 lg:block lg:sticky lg:top-20">
+              <Card>
+                <CardContent>
+                  <ParamPanel
+                    holes={holes}
+                    onParamsChange={handleParamsChange}
+                    initialValues={seedValues}
+                    valveStatus={valveStatus ?? undefined}
+                    sideFilter={sideFilter}
+                    onSideFilterChange={setSideFilter}
+                  />
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent>
+                  <PresetBar
+                    presets={presets}
+                    selectedPresetId={selectedPresetId}
+                    onSelect={handleSelectPreset}
+                    onSaveAs={handleSaveAs}
+                    onUpdate={handleUpdate}
+                    onDelete={handleDelete}
+                    busy={presetBusy}
+                  />
+                </CardContent>
+              </Card>
+            </div>
           </aside>
         )}
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3 no-print">
-            <div className="flex-1">
-              <PresetBar
-                presets={presets}
-                selectedPresetId={selectedPresetId}
-                onSelect={handleSelectPreset}
-                onSaveAs={handleSaveAs}
-                onUpdate={handleUpdate}
-                onDelete={handleDelete}
-                busy={presetBusy}
-              />
-            </div>
             <div className="flex items-center gap-2">
               <button
                 type="button"
