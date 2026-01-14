@@ -15,19 +15,21 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
 export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      <div className="flex min-h-screen">
-        <aside className="w-56 border-r border-slate-200 bg-white p-6">
-          <div className="text-lg font-semibold">Wheel Lacing</div>
-          <nav className="mt-6 space-y-2">
-            <NavLink to="/" className={navLinkClass} end>
-              Builder
-            </NavLink>
-            <NavLink to="/readme" className={navLinkClass}>
-              Readme
-            </NavLink>
-          </nav>
-        </aside>
-        <main className="flex-1 p-6">
+      <div className="min-h-screen">
+        <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4">
+            <div className="text-lg font-semibold">Wheel Lacing</div>
+            <nav className="flex flex-wrap items-center gap-2">
+              <NavLink to="/" className={navLinkClass} end>
+                Builder
+              </NavLink>
+              <NavLink to="/readme" className={navLinkClass}>
+                Readme
+              </NavLink>
+            </nav>
+          </div>
+        </header>
+        <main className="p-6">
           <div className="w-full max-w-none">
             <Routes>
               <Route path="/" element={<Builder />} />

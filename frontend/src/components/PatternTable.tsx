@@ -56,7 +56,7 @@ const csvHeaders = [
 
 type HighlightMode = "current" | "visible";
 type DisplayMode = "table" | "lookup";
-type LookupType = "rim" | "hub";
+type LookupType = "rim" | "hub" | "search";
 
 const lookupFields: Array<{ key: keyof PatternRow; label: string }> = [
   { key: "spoke", label: "Spoke" },
@@ -79,7 +79,13 @@ export default function PatternTable({
   onHighlightRowsChange,
   onHoverSpokeChange,
 }: PatternTableProps) {
-  const [displayMode, setDisplayMode] = useState<DisplayMode>("table");
+  const [displayMode, setDisplayMode] = useState<DisplayMode>(() => {
+    if (typeof window !== "undefined") {
+      return window.matchMedia("(max-width: 768px)").matches ? "lookup" : "table";
+    }
+    return "table";
+  });
+  const [manualDisplayMode, setManualDisplayMode] = useState(false);
   const [sideFilter, setSideFilter] = useState("All");
   const [stepFilter, setStepFilter] = useState("All");
   const [nextStepMode, setNextStepMode] = useState(false);
@@ -88,6 +94,7 @@ export default function PatternTable({
   const [lookupSide, setLookupSide] = useState<PatternRow["side"]>("DS");
   const [lookupType, setLookupType] = useState<LookupType>("rim");
   const [lookupValue, setLookupValue] = useState("");
+  const [searchValue, setSearchValue] = useState("");
   const [sorting, setSorting] = useState<SortingState>([
     { id: "order", desc: false },
   ]);
@@ -97,6 +104,24 @@ export default function PatternTable({
       setDisplayMode("table");
     }
   }, [printMode]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+    if (manualDisplayMode || printMode) {
+      return undefined;
+    }
+    const mediaQuery = window.matchMedia("(max-width: 768px)");
+    const updateDisplayMode = () => {
+      setDisplayMode(mediaQuery.matches ? "lookup" : "table");
+    };
+    updateDisplayMode();
+    mediaQuery.addEventListener("change", updateDisplayMode);
+    return () => {
+      mediaQuery.removeEventListener("change", updateDisplayMode);
+    };
+  }, [manualDisplayMode, printMode]);
 
   const stepOptions = useMemo(() => {
     const steps = Array.from(new Set(rows.map((row) => row.step)));
@@ -182,6 +207,9 @@ export default function PatternTable({
   }, [lookupSide, rows]);
 
   useEffect(() => {
+    if (lookupType === "search") {
+      return;
+    }
     const numbers = lookupType === "rim" ? lookupNumbers.rim : lookupNumbers.hub;
     if (!numbers.length) {
       setLookupValue("");
@@ -198,6 +226,22 @@ export default function PatternTable({
   }, [lookupNumbers, lookupType, lookupValue]);
 
   const lookupMatches = useMemo(() => {
+    if (lookupType === "search") {
+      const normalized = searchValue.trim().toLowerCase();
+      if (!normalized) {
+        return [];
+      }
+      const numericValue = Number(normalized);
+      return rows.filter((row) => {
+        if (row.side !== lookupSide) {
+          return false;
+        }
+        const spokeMatch = row.spoke.toLowerCase().includes(normalized);
+        const orderMatch =
+          !Number.isNaN(numericValue) && row.order === numericValue;
+        return spokeMatch || orderMatch;
+      });
+    }
     if (!lookupValue) {
       return [];
     }
@@ -213,7 +257,7 @@ export default function PatternTable({
         ? row.rimHole === numericValue
         : row.hubHole === numericValue;
     });
-  }, [lookupSide, lookupType, lookupValue, rows]);
+  }, [lookupSide, lookupType, lookupValue, rows, searchValue]);
 
   const lookupRow = lookupMatches[0] ?? null;
 
@@ -263,7 +307,10 @@ export default function PatternTable({
                   <button
                     key={mode}
                     type="button"
-                    onClick={() => setDisplayMode(mode)}
+                    onClick={() => {
+                      setManualDisplayMode(true);
+                      setDisplayMode(mode);
+                    }}
                     className={`rounded-full px-3 py-1 text-xs font-medium ${
                       displayMode === mode
                         ? "bg-slate-900 text-white"
@@ -477,7 +524,7 @@ export default function PatternTable({
               ))}
             </div>
             <div className="flex items-center gap-2">
-              {(["rim", "hub"] as const).map((type) => (
+              {(["rim", "hub", "search"] as const).map((type) => (
                 <button
                   key={type}
                   type="button"
@@ -488,33 +535,49 @@ export default function PatternTable({
                       : "border-slate-200 bg-white text-slate-700"
                   }`}
                 >
-                  {type === "rim" ? "Rim hole" : "Hub hole"}
+                  {type === "rim"
+                    ? "Rim hole"
+                    : type === "hub"
+                      ? "Hub hole"
+                      : "Spoke/Order"}
                 </button>
               ))}
             </div>
-            <label className="text-xs font-medium text-slate-600">
-              Hole number
-              <select
-                className="ml-2 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs"
-                value={lookupValue}
-                onChange={(event) => setLookupValue(event.target.value)}
-                disabled={
-                  (lookupType === "rim"
+            {lookupType === "search" ? (
+              <label className="text-xs font-medium text-slate-600">
+                Spoke or order
+                <input
+                  className="ml-2 w-36 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs"
+                  value={searchValue}
+                  onChange={(event) => setSearchValue(event.target.value)}
+                  placeholder="e.g. 12 or R1-3"
+                />
+              </label>
+            ) : (
+              <label className="text-xs font-medium text-slate-600">
+                Hole number
+                <select
+                  className="ml-2 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs"
+                  value={lookupValue}
+                  onChange={(event) => setLookupValue(event.target.value)}
+                  disabled={
+                    (lookupType === "rim"
+                      ? lookupNumbers.rim
+                      : lookupNumbers.hub
+                    ).length === 0
+                  }
+                >
+                  {(lookupType === "rim"
                     ? lookupNumbers.rim
                     : lookupNumbers.hub
-                  ).length === 0
-                }
-              >
-                {(lookupType === "rim"
-                  ? lookupNumbers.rim
-                  : lookupNumbers.hub
-                ).map((value) => (
-                  <option key={value} value={value}>
-                    {value}
-                  </option>
-                ))}
-              </select>
-            </label>
+                  ).map((value) => (
+                    <option key={value} value={value}>
+                      {value}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
           </div>
           <div className="mt-4">
             {lookupRow ? (
