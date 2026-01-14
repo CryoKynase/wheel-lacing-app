@@ -21,6 +21,12 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import {
   computePattern,
@@ -66,6 +72,33 @@ function normalizeParamsForHoles(
   };
 }
 
+const csvColumns: Array<keyof PatternRow> = [
+  "spoke",
+  "order",
+  "step",
+  "side",
+  "oddEvenSet",
+  "hubHole",
+  "heads",
+  "rimHole",
+  "crossesDescribed",
+  "notes",
+];
+
+function toCsv(rows: PatternRow[]) {
+  const header = csvColumns.join(",");
+  const lines = rows.map((row) =>
+    csvColumns
+      .map((key) => {
+        const value = row[key] ?? "";
+        const text = String(value).replace(/"/g, '""');
+        return `"${text}"`;
+      })
+      .join(",")
+  );
+  return [header, ...lines].join("\n");
+}
+
 export default function Builder({ tableColumns }: BuilderProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -99,6 +132,34 @@ export default function Builder({ tableColumns }: BuilderProps) {
   const [highlightRows, setHighlightRows] = useState<PatternRow[]>([]);
   const [hoveredSpoke, setHoveredSpoke] = useState<string | null>(null);
   const [sideFilter, setSideFilter] = useState<"All" | "DS" | "NDS">("All");
+  const tableRows = visibleRows.length ? visibleRows : data?.rows ?? [];
+
+  const handleCopyCsv = useCallback(
+    async (rows: PatternRow[]) => {
+      try {
+        await navigator.clipboard.writeText(toCsv(rows));
+        toast({ title: "Copied to clipboard" });
+      } catch (err) {
+        toast({
+          title: "Something went wrong",
+          description:
+            err instanceof Error ? err.message : "Unable to copy CSV",
+          variant: "destructive",
+        });
+      }
+    },
+    [toast]
+  );
+
+  const handleDownloadCsv = useCallback((rows: PatternRow[]) => {
+    const blob = new Blob([toCsv(rows)], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "wheel-lacing.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  }, []);
 
   const handleParamsChange = useCallback(async (params: PatternRequest) => {
     setCurrentParams(params);
@@ -479,11 +540,42 @@ export default function Builder({ tableColumns }: BuilderProps) {
               </TabsList>
               <TabsContent value="table">
                 <Card id="pattern-table">
-                  <CardHeader>
-                    <CardTitle>Pattern table</CardTitle>
-                    <CardDescription>
-                      Detailed spoke-by-spoke lacing order.
-                    </CardDescription>
+                  <CardHeader className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <CardTitle>Pattern table</CardTitle>
+                      <CardDescription>
+                        Detailed spoke-by-spoke lacing order.
+                      </CardDescription>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm">
+                          Actions
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => handleCopyCsv(tableRows)}
+                        >
+                          Copy visible rows as CSV
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleCopyCsv(data.rows)}
+                        >
+                          Copy all rows as CSV
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDownloadCsv(data.rows)}
+                        >
+                          Download CSV
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => setPrintMode(true)}
+                        >
+                          Print
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="overflow-x-auto rounded-md border border-slate-200 bg-white">
@@ -593,11 +685,42 @@ export default function Builder({ tableColumns }: BuilderProps) {
                     </Card>
                   )}
                   <Card id="pattern-table-both">
-                    <CardHeader>
-                      <CardTitle>Pattern table</CardTitle>
-                      <CardDescription>
-                        Detailed spoke-by-spoke lacing order.
-                      </CardDescription>
+                    <CardHeader className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <CardTitle>Pattern table</CardTitle>
+                        <CardDescription>
+                          Detailed spoke-by-spoke lacing order.
+                        </CardDescription>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            Actions
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => handleCopyCsv(tableRows)}
+                          >
+                            Copy visible rows as CSV
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleCopyCsv(data.rows)}
+                          >
+                            Copy all rows as CSV
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleDownloadCsv(data.rows)}
+                          >
+                            Download CSV
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setPrintMode(true)}
+                          >
+                            Print
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <div className="overflow-x-auto rounded-md border border-slate-200 bg-white">
