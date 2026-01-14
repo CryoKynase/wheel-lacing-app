@@ -23,7 +23,6 @@ pytest -q
 Health check:
 
 ```bash
-curl http://localhost:8007/api/health
 ```
 
 ## Frontend (React + Vite)
