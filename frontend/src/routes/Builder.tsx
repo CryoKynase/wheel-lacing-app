@@ -4,6 +4,7 @@ import ParamPanel from "../components/ParamPanel";
 import PatternDiagram from "../components/PatternDiagram";
 import PatternTable from "../components/PatternTable";
 import PresetBar from "../components/PresetBar";
+import SchranerIntro from "../components/SchranerIntro";
 import {
   computePattern,
   createPreset,
@@ -174,9 +175,6 @@ export default function Builder() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Builder</h1>
-          <p className="text-sm text-slate-600">
-            Adjust parameters and review the lacing order live.
-          </p>
         </div>
         <div className="text-xs text-slate-500">
           {presetSummaryLabel
@@ -184,6 +182,8 @@ export default function Builder() {
             : `Defaults: ${defaultPatternRequest.holes}H ${defaultPatternRequest.crosses}x`}
         </div>
       </div>
+
+      <SchranerIntro />
 
       <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
         {!printMode && (
