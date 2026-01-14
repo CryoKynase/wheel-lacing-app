@@ -11,6 +11,13 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Info } from "lucide-react";
 
 const schema = z.object({
   holes: z.number().min(20).refine((val) => val % 2 === 0, "Must be even"),
@@ -72,6 +79,14 @@ export default function ParamPanel({
   const values = useWatch({ control });
   const h = holes / 2;
   const maxCross = maxCrosses(holes);
+  const rimHoleHint =
+    values && values.startRimHole >= Math.max(holes - 2, 1)
+      ? "Near the rim limit; last holes can crowd the valve."
+      : null;
+  const maxCrossHint =
+    values && values.crosses === maxCross
+      ? "Max crosses for this hole count."
+      : null;
 
   const crossOptions = useMemo(() => {
     const preferred = commonCrosses(holes);
@@ -146,12 +161,13 @@ export default function ParamPanel({
         </p>
       </header>
 
-      <Accordion
-        type="multiple"
-        value={openGroups}
-        onValueChange={setOpenGroups}
-        className="space-y-3"
-      >
+      <TooltipProvider delayDuration={200}>
+        <Accordion
+          type="multiple"
+          value={openGroups}
+          onValueChange={setOpenGroups}
+          className="space-y-3"
+        >
         <AccordionItem value="basics">
           <AccordionTrigger>Basics</AccordionTrigger>
           <AccordionContent className="space-y-4">
@@ -181,6 +197,9 @@ export default function ParamPanel({
               <p className="mt-1 text-xs text-slate-500">
                 Common first, max allowed {maxCross}x.
               </p>
+              {maxCrossHint && (
+                <p className="mt-1 text-xs text-slate-500">{maxCrossHint}</p>
+              )}
             </label>
 
             <label className="block">
@@ -205,7 +224,23 @@ export default function ParamPanel({
           <AccordionTrigger>Starts</AccordionTrigger>
           <AccordionContent className="space-y-4">
             <label className="block">
-              <span className="text-sm font-medium">Start rim hole</span>
+              <span className="inline-flex items-center gap-2 text-sm font-medium">
+                Start rim hole
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="text-slate-500 hover:text-slate-700"
+                      aria-label="Start rim hole help"
+                    >
+                      <Info className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Pick the rim hole where you want to begin lacing.
+                  </TooltipContent>
+                </Tooltip>
+              </span>
               <input
                 type="number"
                 min={1}
@@ -213,10 +248,29 @@ export default function ParamPanel({
                 className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
                 {...register("startRimHole", { valueAsNumber: true })}
               />
+              {rimHoleHint && (
+                <p className="mt-1 text-xs text-slate-500">{rimHoleHint}</p>
+              )}
             </label>
 
             <label className="block">
-              <span className="text-sm font-medium">Start hub hole (DS)</span>
+              <span className="inline-flex items-center gap-2 text-sm font-medium">
+                Start hub hole (DS)
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="text-slate-500 hover:text-slate-700"
+                      aria-label="Start hub hole DS help"
+                    >
+                      <Info className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Choose the starting hole on the drive-side flange.
+                  </TooltipContent>
+                </Tooltip>
+              </span>
               <input
                 type="number"
                 min={1}
@@ -230,7 +284,23 @@ export default function ParamPanel({
             </label>
 
             <label className="block">
-              <span className="text-sm font-medium">Start hub hole (NDS)</span>
+              <span className="inline-flex items-center gap-2 text-sm font-medium">
+                Start hub hole (NDS)
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="text-slate-500 hover:text-slate-700"
+                      aria-label="Start hub hole NDS help"
+                    >
+                      <Info className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Choose the starting hole on the non-drive flange.
+                  </TooltipContent>
+                </Tooltip>
+              </span>
               <input
                 type="number"
                 min={1}
@@ -249,7 +319,23 @@ export default function ParamPanel({
           <AccordionTrigger>Valve</AccordionTrigger>
           <AccordionContent className="space-y-4">
             <label className="block">
-              <span className="text-sm font-medium">Valve reference</span>
+              <span className="inline-flex items-center gap-2 text-sm font-medium">
+                Valve reference
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="text-slate-500 hover:text-slate-700"
+                      aria-label="Valve reference help"
+                    >
+                      <Info className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Pick which side of the valve your first spoke should pass.
+                  </TooltipContent>
+                </Tooltip>
+              </span>
               <select
                 className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
                 {...register("valveReference")}
@@ -279,7 +365,23 @@ export default function ParamPanel({
           <AccordionTrigger>Filters</AccordionTrigger>
           <AccordionContent className="space-y-4">
             <label className="block">
-              <span className="text-sm font-medium">DS/NDS</span>
+              <span className="inline-flex items-center gap-2 text-sm font-medium">
+                DS/NDS
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="text-slate-500 hover:text-slate-700"
+                      aria-label="DS/NDS filter help"
+                    >
+                      <Info className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Filter the output to one side of the wheel.
+                  </TooltipContent>
+                </Tooltip>
+              </span>
               <select
                 className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
                 value={sideFilter}
@@ -297,7 +399,19 @@ export default function ParamPanel({
             </label>
           </AccordionContent>
         </AccordionItem>
-      </Accordion>
+
+        <AccordionItem value="quick-tips">
+          <AccordionTrigger>Quick tips</AccordionTrigger>
+          <AccordionContent>
+            <ul className="list-disc space-y-2 pl-5 text-sm text-slate-600">
+              <li>Start with a common cross count, then adjust if needed.</li>
+              <li>Valve clearance warns if spokes may crowd the valve area.</li>
+              <li>DS is the drive side; NDS is the non-drive side.</li>
+            </ul>
+          </AccordionContent>
+        </AccordionItem>
+        </Accordion>
+      </TooltipProvider>
 
       <button
         type="button"

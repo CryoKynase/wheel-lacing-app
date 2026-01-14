@@ -7,7 +7,13 @@ import PatternTable from "../components/PatternTable";
 import PresetBar from "../components/PresetBar";
 import SchranerIntro from "../components/SchranerIntro";
 import ComputeStatus from "../components/ComputeStatus";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Tabs,
@@ -86,6 +92,9 @@ export default function Builder({ tableColumns }: BuilderProps) {
     normalizeParamsForHoles(defaultPatternRequest, holes)
   );
   const [printMode, setPrintMode] = useState(false);
+  const [resultsTab, setResultsTab] = useState<"table" | "diagram" | "both">(
+    "both"
+  );
   const [visibleRows, setVisibleRows] = useState<PatternRow[]>([]);
   const [highlightRows, setHighlightRows] = useState<PatternRow[]>([]);
   const [hoveredSpoke, setHoveredSpoke] = useState<string | null>(null);
@@ -182,11 +191,7 @@ export default function Builder({ tableColumns }: BuilderProps) {
     [holes, navigate, toast]
   );
 
-  const handleSaveAs = useCallback(async () => {
-    const name = window.prompt("Preset name?");
-    if (!name) {
-      return;
-    }
+  const handleSaveAs = useCallback(async (name: string) => {
     setPresetBusy(true);
     setPresetError(null);
     try {
@@ -239,10 +244,6 @@ export default function Builder({ tableColumns }: BuilderProps) {
     if (!selectedPresetId) {
       return;
     }
-    const confirmed = window.confirm("Delete this preset?");
-    if (!confirmed) {
-      return;
-    }
     setPresetBusy(true);
     setPresetError(null);
     try {
@@ -269,6 +270,7 @@ export default function Builder({ tableColumns }: BuilderProps) {
 
   useEffect(() => {
     if (printMode) {
+      setResultsTab("table");
       window.setTimeout(() => window.print(), 100);
     }
   }, [printMode]);
@@ -320,6 +322,7 @@ export default function Builder({ tableColumns }: BuilderProps) {
                       selectedPresetId={selectedPresetId}
                       currentParams={currentParams}
                       activePresetParams={activePresetParams}
+                      presetError={presetError}
                       onSelect={handleSelectPreset}
                       onSaveAs={handleSaveAs}
                       onUpdate={handleUpdate}
@@ -350,6 +353,7 @@ export default function Builder({ tableColumns }: BuilderProps) {
                     selectedPresetId={selectedPresetId}
                     currentParams={currentParams}
                     activePresetParams={activePresetParams}
+                    presetError={presetError}
                     onSelect={handleSelectPreset}
                     onSaveAs={handleSaveAs}
                     onUpdate={handleUpdate}
@@ -364,20 +368,15 @@ export default function Builder({ tableColumns }: BuilderProps) {
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3 no-print">
             <div className="flex items-center gap-2">
-              <button
+              <Button
                 type="button"
+                variant="outline"
                 onClick={() => setPrintMode((prev) => !prev)}
-                className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium hover:bg-slate-50"
               >
                 {printMode ? "Exit print view" : "Print view"}
-              </button>
+              </Button>
             </div>
           </div>
-          {presetError && (
-            <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-              {presetError}
-            </div>
-          )}
           {printMode && (
             <div className="rounded-md border border-slate-200 bg-white px-4 py-3 text-sm">
               <div className="flex flex-wrap items-center justify-between gap-2 font-semibold">
@@ -414,20 +413,80 @@ export default function Builder({ tableColumns }: BuilderProps) {
             lastUpdated={lastUpdated}
             onRetry={() => handleParamsChange(currentParams)}
           />
+          {error && (
+            <Card>
+              <CardHeader className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <CardTitle className="text-sm">Unable to compute pattern</CardTitle>
+                  <CardDescription>{error}</CardDescription>
+                </div>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => handleParamsChange(currentParams)}
+                >
+                  Retry
+                </Button>
+              </CardHeader>
+            </Card>
+          )}
+          {loading && !data && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Calculating pattern…</CardTitle>
+                <CardDescription>
+                  Crunching the spoke order and valve alignment.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2 text-sm text-slate-600">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
+                  Loading results…
+                </div>
+              </CardContent>
+            </Card>
+          )}
           {data ? (
-            <Tabs defaultValue="both" className="space-y-4">
-              <TabsList>
-                <TabsTrigger value="table">Table</TabsTrigger>
-                <TabsTrigger value="diagram">Diagram</TabsTrigger>
-                <TabsTrigger value="both">Both</TabsTrigger>
+            <Tabs
+              value={resultsTab}
+              onValueChange={(value) =>
+                setResultsTab(value as "table" | "diagram" | "both")
+              }
+              className="space-y-4"
+            >
+              <TabsList className="flex flex-wrap gap-2 bg-transparent p-0">
+                <TabsTrigger
+                  value="table"
+                  className="rounded-md border border-slate-200 bg-white text-xs font-semibold text-slate-700 data-[state=active]:border-slate-900 data-[state=active]:bg-slate-900 data-[state=active]:text-white"
+                >
+                  Table
+                </TabsTrigger>
+                <TabsTrigger
+                  value="diagram"
+                  disabled={printMode}
+                  className="rounded-md border border-slate-200 bg-white text-xs font-semibold text-slate-700 data-[state=active]:border-slate-900 data-[state=active]:bg-slate-900 data-[state=active]:text-white data-[disabled]:opacity-50 data-[disabled]:pointer-events-none"
+                >
+                  Diagram
+                </TabsTrigger>
+                <TabsTrigger
+                  value="both"
+                  disabled={printMode}
+                  className="rounded-md border border-slate-200 bg-white text-xs font-semibold text-slate-700 data-[state=active]:border-slate-900 data-[state=active]:bg-slate-900 data-[state=active]:text-white data-[disabled]:opacity-50 data-[disabled]:pointer-events-none"
+                >
+                  Both
+                </TabsTrigger>
               </TabsList>
               <TabsContent value="table">
                 <Card id="pattern-table">
+                  <CardHeader>
+                    <CardTitle>Pattern table</CardTitle>
+                    <CardDescription>
+                      Detailed spoke-by-spoke lacing order.
+                    </CardDescription>
+                  </CardHeader>
                   <CardContent className="space-y-3">
-                    <div className="text-xs font-semibold uppercase text-slate-500">
-                      Pattern table
-                    </div>
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto rounded-md border border-slate-200 bg-white">
                       <PatternTable
                         rows={data.rows}
                         printMode={printMode}
@@ -438,35 +497,45 @@ export default function Builder({ tableColumns }: BuilderProps) {
                         columnVisibility={tableColumns}
                       />
                     </div>
+                    <p className="text-xs text-slate-500 sm:hidden">
+                      Tip: scroll horizontally for more columns.
+                    </p>
                   </CardContent>
                 </Card>
               </TabsContent>
               <TabsContent value="diagram">
                 {!printMode && (
                   <Card>
-                    <CardContent>
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="text-xs font-semibold uppercase text-slate-500">
-                          Pattern diagram
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2 text-xs"
-                          onClick={() =>
+                    <CardHeader className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <CardTitle>Pattern diagram</CardTitle>
+                        <CardDescription>
+                          Visual layout of the lacing sequence.
+                        </CardDescription>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        aria-label="Jump to the pattern table"
+                        onClick={() => {
+                          setResultsTab("table");
+                          window.requestAnimationFrame(() => {
                             document
                               .getElementById("pattern-table")
                               ?.scrollIntoView({
                                 behavior: "smooth",
                                 block: "start",
-                              })
-                          }
-                        >
-                          Jump to table
-                        </Button>
-                      </div>
-                      <div className="mt-3 max-w-full">
+                              });
+                          });
+                        }}
+                      >
+                        Jump to table
+                      </Button>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="mt-1 max-w-full">
                         <PatternDiagram
                           holes={currentParams.holes}
                           rows={data.rows}
@@ -484,29 +553,33 @@ export default function Builder({ tableColumns }: BuilderProps) {
                 <div className="space-y-6">
                   {!printMode && (
                     <Card>
-                      <CardContent>
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="text-xs font-semibold uppercase text-slate-500">
-                            Pattern diagram
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-xs"
-                            onClick={() =>
-                              document
-                                .getElementById("pattern-table")
-                                ?.scrollIntoView({
-                                  behavior: "smooth",
-                                  block: "start",
-                                })
-                            }
-                          >
-                            Jump to table
-                          </Button>
+                      <CardHeader className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <CardTitle>Pattern diagram</CardTitle>
+                          <CardDescription>
+                            Visual layout of the lacing sequence.
+                          </CardDescription>
                         </div>
-                        <div className="mt-3 max-w-full">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          aria-label="Jump to the pattern table"
+                          onClick={() =>
+                            document
+                              .getElementById("pattern-table-both")
+                              ?.scrollIntoView({
+                                behavior: "smooth",
+                                block: "start",
+                              })
+                          }
+                        >
+                          Jump to table
+                        </Button>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="mt-1 max-w-full">
                           <PatternDiagram
                             holes={currentParams.holes}
                             rows={data.rows}
@@ -519,12 +592,15 @@ export default function Builder({ tableColumns }: BuilderProps) {
                       </CardContent>
                     </Card>
                   )}
-                  <Card id="pattern-table">
+                  <Card id="pattern-table-both">
+                    <CardHeader>
+                      <CardTitle>Pattern table</CardTitle>
+                      <CardDescription>
+                        Detailed spoke-by-spoke lacing order.
+                      </CardDescription>
+                    </CardHeader>
                     <CardContent className="space-y-3">
-                      <div className="text-xs font-semibold uppercase text-slate-500">
-                        Pattern table
-                      </div>
-                      <div className="overflow-x-auto">
+                      <div className="overflow-x-auto rounded-md border border-slate-200 bg-white">
                         <PatternTable
                           rows={data.rows}
                           printMode={printMode}
@@ -535,6 +611,9 @@ export default function Builder({ tableColumns }: BuilderProps) {
                           columnVisibility={tableColumns}
                         />
                       </div>
+                      <p className="text-xs text-slate-500 sm:hidden">
+                        Tip: scroll horizontally for more columns.
+                      </p>
                     </CardContent>
                   </Card>
                 </div>
