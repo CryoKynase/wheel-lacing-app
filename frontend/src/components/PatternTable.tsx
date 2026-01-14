@@ -8,8 +8,9 @@ import {
 } from "@tanstack/react-table";
 
 import type { PatternRow } from "../lib/types";
+import type { TableColumnVisibility } from "../lib/tableSettings";
 
-const columns: ColumnDef<PatternRow>[] = [
+const baseColumns: ColumnDef<PatternRow>[] = [
   { accessorKey: "spoke", header: "spoke" },
   { accessorKey: "order", header: "order" },
   { accessorKey: "step", header: "step" },
@@ -29,18 +30,20 @@ type PatternTableProps = {
   onVisibleRowsChange?: (rows: PatternRow[]) => void;
   onHighlightRowsChange?: (rows: PatternRow[]) => void;
   onHoverSpokeChange?: (spoke: string | null) => void;
+  sideFilter: "All" | "DS" | "NDS";
+  columnVisibility: TableColumnVisibility;
 };
 
 const orderedSteps = ["R1", "R2", "R3", "L1", "L3", "L4"];
 
-const stickyConfig: Record<string, { left: number; width: string }> = {
-  spoke: { left: 0, width: "96px" },
-  order: { left: 96, width: "64px" },
-  step: { left: 160, width: "64px" },
-  side: { left: 224, width: "64px" },
-};
+const stickyColumns: Array<{ id: keyof PatternRow; width: number }> = [
+  { id: "spoke", width: 96 },
+  { id: "order", width: 64 },
+  { id: "step", width: 64 },
+  { id: "side", width: 64 },
+];
 
-const csvHeaders = [
+const baseCsvHeaders: Array<keyof PatternRow> = [
   "spoke",
   "order",
   "step",
@@ -58,7 +61,7 @@ type HighlightMode = "current" | "visible";
 type DisplayMode = "table" | "lookup";
 type LookupType = "rim" | "hub" | "search";
 
-const lookupFields: Array<{ key: keyof PatternRow; label: string }> = [
+const baseLookupFields: Array<{ key: keyof PatternRow; label: string }> = [
   { key: "spoke", label: "Spoke" },
   { key: "order", label: "Order" },
   { key: "step", label: "Step" },
@@ -78,6 +81,8 @@ export default function PatternTable({
   onVisibleRowsChange,
   onHighlightRowsChange,
   onHoverSpokeChange,
+  sideFilter,
+  columnVisibility,
 }: PatternTableProps) {
   const [displayMode, setDisplayMode] = useState<DisplayMode>(() => {
     if (typeof window !== "undefined") {
@@ -86,7 +91,6 @@ export default function PatternTable({
     return "table";
   });
   const [manualDisplayMode, setManualDisplayMode] = useState(false);
-  const [sideFilter, setSideFilter] = useState("All");
   const [stepFilter, setStepFilter] = useState("All");
   const [nextStepMode, setNextStepMode] = useState(false);
   const [activeStep, setActiveStep] = useState<string | null>(null);
@@ -98,6 +102,48 @@ export default function PatternTable({
   const [sorting, setSorting] = useState<SortingState>([
     { id: "order", desc: false },
   ]);
+  const resolvedVisibility = useMemo<Record<keyof PatternRow, boolean>>(
+    () => ({
+      spoke: true,
+      order: true,
+      step: true,
+      side: true,
+      oddEvenSet: true,
+      k: true,
+      hubHole: true,
+      heads: true,
+      rimHole: true,
+      crossesDescribed: true,
+      notes: true,
+      ...columnVisibility,
+    }),
+    [columnVisibility]
+  );
+
+  const stickyConfig = useMemo(() => {
+    let left = 0;
+    return stickyColumns.reduce<Record<string, { left: number; width: string }>>(
+      (acc, column) => {
+        if (!resolvedVisibility[column.id]) {
+          return acc;
+        }
+        acc[column.id] = { left, width: `${column.width}px` };
+        left += column.width;
+        return acc;
+      },
+      {}
+    );
+  }, [resolvedVisibility]);
+
+  const csvHeaders = useMemo(
+    () => baseCsvHeaders.filter((key) => resolvedVisibility[key]),
+    [resolvedVisibility]
+  );
+
+  const lookupFields = useMemo(
+    () => baseLookupFields.filter((field) => resolvedVisibility[field.key]),
+    [resolvedVisibility]
+  );
 
   useEffect(() => {
     if (printMode) {
@@ -263,8 +309,8 @@ export default function PatternTable({
 
   const table = useReactTable({
     data: visibleRows,
-    columns,
-    state: { sorting },
+    columns: baseColumns,
+    state: { sorting, columnVisibility: resolvedVisibility },
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -399,22 +445,6 @@ export default function PatternTable({
       {displayMode === "table" && (
         <>
           <div className="flex flex-wrap items-center gap-3 no-print">
-            <div className="flex items-center gap-2">
-              {(["All", "DS", "NDS"] as const).map((side) => (
-                <button
-                  key={side}
-                  className={`rounded-full border px-3 py-1 text-xs font-medium ${
-                    sideFilter === side
-                      ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-200 bg-white text-slate-700"
-                  }`}
-                  onClick={() => setSideFilter(side)}
-                  type="button"
-                >
-                  {side}
-                </button>
-              ))}
-            </div>
             <div className="flex items-center gap-2">
               {stepOptions.map((step) => (
                 <button

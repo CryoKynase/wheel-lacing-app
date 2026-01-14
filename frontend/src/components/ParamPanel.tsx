@@ -6,8 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { defaultPatternRequest } from "../lib/defaults";
 import type { PatternRequest } from "../lib/types";
 
-const holeOptions = [20, 24, 28, 32, 36];
-
 const schema = z.object({
   holes: z.number().min(20).refine((val) => val % 2 === 0, "Must be even"),
   wheelType: z.enum(["rear", "front"]),
@@ -37,29 +35,33 @@ function commonCrosses(holes: number) {
 }
 
 export type ParamPanelProps = {
+  holes: number;
   onParamsChange: (params: PatternRequest) => void;
   initialValues?: PatternRequest;
   valveStatus?: { status: "clear" | "crowded"; reason: string };
+  sideFilter: "All" | "DS" | "NDS";
+  onSideFilterChange: (next: "All" | "DS" | "NDS") => void;
 };
 
 export default function ParamPanel({
+  holes,
   onParamsChange,
   initialValues,
   valveStatus,
+  sideFilter,
+  onSideFilterChange,
 }: ParamPanelProps) {
   const {
     register,
     control,
     reset,
     setValue,
-    formState: { errors },
   } = useForm<PatternRequest>({
     resolver: zodResolver(schema),
     defaultValues: initialValues ?? defaultPatternRequest,
   });
 
   const values = useWatch({ control });
-  const holes = values?.holes ?? defaultPatternRequest.holes;
   const h = holes / 2;
   const maxCross = maxCrosses(holes);
 
@@ -82,13 +84,16 @@ export default function ParamPanel({
 
   useEffect(() => {
     if (initialValues) {
-      reset(initialValues);
+      reset({ ...initialValues, holes });
     }
-  }, [initialValues, reset]);
+  }, [holes, initialValues, reset]);
 
   useEffect(() => {
     if (!values) {
       return;
+    }
+    if ((values.holes ?? 0) !== holes) {
+      setValue("holes", holes, { shouldDirty: true });
     }
     if ((values.crosses ?? 0) > maxCross) {
       setValue("crosses", maxCross, { shouldDirty: true });
@@ -131,20 +136,18 @@ export default function ParamPanel({
 
       <div className="space-y-4">
         <label className="block">
-          <span className="text-sm font-medium">Holes</span>
+          <span className="text-sm font-medium">DS/NDS</span>
           <select
             className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
-            {...register("holes", { valueAsNumber: true })}
+            value={sideFilter}
+            onChange={(event) =>
+              onSideFilterChange(event.target.value as "All" | "DS" | "NDS")
+            }
           >
-            {holeOptions.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
-            ))}
+            <option value="All">All</option>
+            <option value="DS">DS</option>
+            <option value="NDS">NDS</option>
           </select>
-          {errors.holes && (
-            <p className="mt-1 text-xs text-rose-600">{errors.holes.message}</p>
-          )}
         </label>
 
         <label className="block">

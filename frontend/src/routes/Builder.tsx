@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
 import ParamPanel from "../components/ParamPanel";
 import PatternDiagram from "../components/PatternDiagram";
@@ -14,6 +15,8 @@ import {
   updatePreset,
 } from "../lib/api";
 import { defaultPatternRequest } from "../lib/defaults";
+import { isHoleOption } from "../lib/holeOptions";
+import type { TableColumnVisibility } from "../lib/tableSettings";
 import { evaluateValveClearance } from "../lib/valveClearance";
 import type {
   PatternRequest,
@@ -22,7 +25,39 @@ import type {
   PresetSummary,
 } from "../lib/types";
 
-export default function Builder() {
+type BuilderProps = {
+  tableColumns: TableColumnVisibility;
+};
+
+function maxCrosses(holes: number) {
+  const h = holes / 2;
+  return Math.floor((h - 2) / 2);
+}
+
+function normalizeParamsForHoles(
+  params: PatternRequest,
+  holes: number
+): PatternRequest {
+  const h = holes / 2;
+  const maxCross = maxCrosses(holes);
+  return {
+    ...params,
+    holes,
+    crosses: Math.min(params.crosses, maxCross),
+    startRimHole: Math.min(params.startRimHole, holes),
+    startHubHoleDS: Math.min(params.startHubHoleDS, h),
+    startHubHoleNDS: Math.min(params.startHubHoleNDS, h),
+  };
+}
+
+export default function Builder({ tableColumns }: BuilderProps) {
+  const navigate = useNavigate();
+  const { holes: holesParam } = useParams();
+  const parsedHoles = Number(holesParam);
+  const hasValidHolesParam = isHoleOption(parsedHoles);
+  const holes = hasValidHolesParam
+    ? parsedHoles
+    : defaultPatternRequest.holes;
   const [data, setData] = useState<PatternResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,17 +65,18 @@ export default function Builder() {
   const [presets, setPresets] = useState<PresetSummary[]>([]);
   const [presetBusy, setPresetBusy] = useState(false);
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
-  const [currentParams, setCurrentParams] = useState<PatternRequest>(
-    defaultPatternRequest
+  const [currentParams, setCurrentParams] = useState<PatternRequest>(() =>
+    normalizeParamsForHoles(defaultPatternRequest, holes)
   );
-  const [seedValues, setSeedValues] = useState<PatternRequest>(
-    defaultPatternRequest
+  const [seedValues, setSeedValues] = useState<PatternRequest>(() =>
+    normalizeParamsForHoles(defaultPatternRequest, holes)
   );
   const [printMode, setPrintMode] = useState(false);
   const [showDiagram, setShowDiagram] = useState(true);
   const [visibleRows, setVisibleRows] = useState<PatternRow[]>([]);
   const [highlightRows, setHighlightRows] = useState<PatternRow[]>([]);
   const [hoveredSpoke, setHoveredSpoke] = useState<string | null>(null);
+  const [sideFilter, setSideFilter] = useState<"All" | "DS" | "NDS">("All");
 
   const handleParamsChange = useCallback(async (params: PatternRequest) => {
     setCurrentParams(params);
@@ -68,6 +104,18 @@ export default function Builder() {
   useEffect(() => {
     refreshPresets();
   }, [refreshPresets]);
+
+  useEffect(() => {
+    if (!holesParam || hasValidHolesParam) {
+      return;
+    }
+    navigate(`/builder/${defaultPatternRequest.holes}`, { replace: true });
+  }, [hasValidHolesParam, holesParam, navigate]);
+
+  useEffect(() => {
+    setSeedValues((prev) => normalizeParamsForHoles(prev, holes));
+    setCurrentParams((prev) => normalizeParamsForHoles(prev, holes));
+  }, [holes]);
 
   const presetSummaryLabel = useMemo(() => {
     const match = presets.find((preset) => preset.id === selectedPresetId);
@@ -100,13 +148,16 @@ export default function Builder() {
       try {
         const preset = await getPreset(id);
         setSeedValues(preset.params);
+        if (preset.params.holes !== holes) {
+          navigate(`/builder/${preset.params.holes}`);
+        }
       } catch (err) {
         setPresetError(err instanceof Error ? err.message : "Unexpected error");
       } finally {
         setPresetBusy(false);
       }
     },
-    []
+    [holes, navigate]
   );
 
   const handleSaveAs = useCallback(async () => {
@@ -189,9 +240,12 @@ export default function Builder() {
         {!printMode && (
           <aside className="h-fit lg:sticky lg:top-6 no-print">
             <ParamPanel
+              holes={holes}
               onParamsChange={handleParamsChange}
               initialValues={seedValues}
               valveStatus={valveStatus ?? undefined}
+              sideFilter={sideFilter}
+              onSideFilterChange={setSideFilter}
             />
           </aside>
         )}
@@ -291,6 +345,8 @@ export default function Builder() {
               onVisibleRowsChange={setVisibleRows}
               onHighlightRowsChange={setHighlightRows}
               onHoverSpokeChange={setHoveredSpoke}
+              sideFilter={sideFilter}
+              columnVisibility={tableColumns}
             />
           ) : (
             <div className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">
