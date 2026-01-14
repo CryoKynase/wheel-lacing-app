@@ -306,7 +306,7 @@ export default function PatternDiagram({
         x={valveTextPoint.x}
         y={valveTextPoint.y}
         textAnchor="middle"
-        dominantBaseline="baseline"
+        dominantBaseline="alphabetic"
         fontSize={10}
         fill="#0f172a"
       >
