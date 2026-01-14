@@ -248,12 +248,14 @@ export default function Flow() {
 
           {data ? (
             <div className="overflow-auto rounded-md border border-slate-200 bg-white p-4 lg:min-h-[calc(100vh-220px)]">
-              <FlowDiagram
-                params={currentParams}
-                rows={filteredRows}
-                zoom={zoom}
-                svgRef={svgRef}
-              />
+              <div className="flex justify-center">
+                <FlowDiagram
+                  params={currentParams}
+                  rows={filteredRows}
+                  zoom={zoom}
+                  svgRef={svgRef}
+                />
+              </div>
             </div>
           ) : (
             <div className="rounded-md border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">
