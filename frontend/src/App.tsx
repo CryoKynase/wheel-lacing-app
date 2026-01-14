@@ -9,16 +9,21 @@ import {
   defaultTableColumnVisibility,
   type TableColumnVisibility,
 } from "./lib/tableSettings";
+import {
+  accentThemes,
+  defaultAccentThemeId,
+  type AccentThemeId,
+} from "./lib/theme";
 import { Toaster } from "@/components/ui/toaster";
 
 const linkBase =
-  "block rounded-md px-3 py-2 text-sm font-medium transition";
+  "block rounded-md border border-transparent px-3 py-2 text-sm font-medium transition";
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   `${linkBase} ${
     isActive
-      ? "bg-slate-900 text-white"
-      : "text-slate-700 hover:bg-slate-100"
+      ? "border-primary/30 bg-primary/10 text-foreground"
+      : "text-muted-foreground hover:bg-muted hover:text-foreground"
   }`;
 
 export default function App() {
@@ -30,6 +35,9 @@ export default function App() {
   const [tableColumns, setTableColumns] = useState<TableColumnVisibility>(
     defaultTableColumnVisibility
   );
+  const [accentThemeId, setAccentThemeId] = useState<AccentThemeId>(
+    defaultAccentThemeId
+  );
 
   useEffect(() => {
     const param = builderMatch?.params.holes ?? "";
@@ -39,6 +47,20 @@ export default function App() {
     }
     setSelectedHoles(parsed);
   }, [builderMatch?.params.holes]);
+
+  useEffect(() => {
+    const activeTheme =
+      accentThemes.find((theme) => theme.id === accentThemeId) ??
+      accentThemes[0];
+    const root = document.documentElement;
+    root.style.setProperty("--primary", activeTheme.tokens.primary);
+    root.style.setProperty(
+      "--primary-foreground",
+      activeTheme.tokens.primaryForeground
+    );
+    root.style.setProperty("--ring", activeTheme.tokens.ring);
+    root.style.setProperty("--accent", activeTheme.tokens.accent);
+  }, [accentThemeId]);
 
   const builderPath = useMemo(
     () => `/builder/${selectedHoles}`,
@@ -121,6 +143,8 @@ export default function App() {
                   <Settings
                     tableColumns={tableColumns}
                     onTableColumnsChange={setTableColumns}
+                    accentThemeId={accentThemeId}
+                    onAccentThemeChange={setAccentThemeId}
                   />
                 }
               />
