@@ -1,4 +1,5 @@
 from datetime import datetime
+import textwrap
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
@@ -25,219 +26,209 @@ def compute_pattern_endpoint(req: PatternRequest) -> PatternResponse:
 
 @router.get("/readme")
 def readme() -> dict:
-    markdown =     markdown = """# Wheel Weaver Guide
-**Schraner Workshop Method — written for the bench (not for textbooks)**
+    markdown = textwrap.dedent(
+        """\
+        # Wheel Weaver Guide
+        **Schraner workshop method - written for the bench**
 
-This app generates a **step-by-step lacing table** (plus an optional diagram) for common wheel patterns using the Schraner workshop sequence:
+        Wheel Weaver generates a **step-by-step lacing table** and a matching
+        **diagram/flowchart** using the Schraner workshop sequence:
 
-**R1 → R2 → R3 → L1 → L3 → L4**
+        **R1 -> R2 -> R3 -> L1 -> L3 -> L4**
 
-If you follow the **Order** column from top to bottom, you’ll always place the next spoke into the correct **hub hole**, the correct **rim hole**, with the correct **head orientation**.
+        Follow the **Order** column from top to bottom and you will always place the
+        next spoke into the correct **hub hole**, **rim hole**, and **head orientation**.
 
----
+        ---
 
-## Quick start (do this at the bench)
+        ## Quick start (bench workflow)
 
-1. Pick your **Holes** from the top bar (each hole count has its own page).
-2. Choose **Wheel type** and **Crosses** (e.g. 32H rear 3x).
-3. Turn on **Next step mode** (highly recommended).
-4. Start at **R1** and place the **two reference spokes at the valve**.
-5. Click **Next step** → **R2** and place the spokes listed (odd set fill).
-6. Click **Next step** → **R3** and place the spokes listed (even set weave).
-7. Flip the wheel and repeat for NDS (**L1 → L3 → L4**).
-8. Use **Print view** (paper reference) or **Export CSV** (build record).
+        1. Choose **Rim Holes** from the top bar (20/24/28/32/36H).
+        2. Set **Wheel type** and **Crosses** (e.g. 32H rear 3x).
+        3. Use **Next step mode** in the table to work phase-by-phase.
+        4. Start at **R1** and place the two **reference spokes at the valve**.
+        5. Step through **R2** and **R3** on DS (odd fill then even weave).
+        6. Flip the wheel and repeat **L1 -> L3 -> L4** on NDS.
+        7. Use **Print view** for a paper bench guide or **Export/Copy CSV** for records.
 
-**Row-by-row rule:**  
-**Hub hole → Heads IN/OUT → Rim hole → nipple on a few turns**
+        **Row rule:** Hub hole -> Heads IN/OUT -> Rim hole -> a few nipple turns.
 
----
+        ---
 
-## The viewpoint (this prevents 90% of confusion)
+        ## Orientation (prevents most confusion)
 
-Everything in the app is described as if you are:
+        Everything is described **as if you are looking at the wheel from the DS
+        (drive side) viewpoint**. "Clockwise" means clockwise from the DS view.
 
-> **Looking at the wheel from the DS (Drive Side) viewpoint.**
+        ### DS / NDS
+        - Rear: DS = cassette side, NDS = opposite flange
+        - Front: still uses DS/NDS labels; rotor side is treated as NDS
 
-So when the Readme says **clockwise**, it means clockwise from the DS viewpoint.
+        ### Valve left / right
+        - Valve is at **12 o'clock**
+        - **Right of valve** = clockwise (top-right)
+        - **Left of valve** = counter-clockwise (top-left)
 
----
+        ### Heads OUT / IN
+        - **OUT**: spoke head on the **outside** of the flange (outside -> inside)
+        - **IN**: spoke head on the **inside** of the flange (inside -> outside)
 
-## Glossary (plain English)
+        ---
 
-### DS / NDS
-- **Rear wheel:**  
-  - **DS** = cassette side  
-  - **NDS** = opposite flange
-- **Front wheel:**  
-  - there’s no drivetrain, but this app still uses DS/NDS labels  
-  - **rotor side is treated as NDS**
+        ## Rim numbering (exactly how the app numbers holes)
 
-### Valve-right / Valve-left
-- Valve is at **12 o’clock**
-- **Valve-right** = **clockwise** from the valve (top-right)
-- **Valve-left** = **counter-clockwise** from the valve (top-left)
+        - Valve is at 12 o'clock
+        - Rim holes are numbered **clockwise** from the DS viewpoint
+        - **Hole 1** is the first hole clockwise from the valve
+        - **Hole N** is immediately counter-clockwise from the valve
+        - Wrap-around applies: **N sits next to 1** at the valve
 
-### Heads OUT / Heads IN
-- **OUT** = spoke head sits on the **outside** of the flange  
-  (spoke goes outside → inside)
-- **IN** = spoke head sits on the **inside** of the flange  
-  (spoke goes inside → outside)
+        Practical tip:
+        - Put tape at the valve.
+        - The hole just to the right is **1**.
+        - The hole just to the left is **N**.
 
----
+        ---
 
-## Rim numbering (exactly how the app numbers holes)
+        ## Hub numbering (exactly how the app counts flange holes)
 
-- Valve is at **12 o’clock**
-- Rim holes are numbered **clockwise** when viewed from the **DS**
-- **Hole #1** is the first hole **clockwise** from the valve (top-right)
-- **Hole #N** is immediately **counter-clockwise** from the valve (top-left)
-- Wrap-around applies: **N sits next to 1** at the valve
+        Let:
+        - **N** = total holes (e.g. 32)
+        - **H** = holes per flange = **N/2** (e.g. 16)
 
-**Practical tip (do this once and you’ll never doubt it):**
-- Put a small piece of tape at the valve.
-- The hole just to the right (clockwise) is **1**.
-- The hole just to the left (counter-clockwise) is **N**.
+        Each flange is numbered **1..H clockwise as you look directly at that flange**.
 
----
+        If your hub has no reference mark:
+        - Pick any physical hole as "1".
+        - If your hub has a readable band name on it, conventon states that the rider
+        - when seated on the bike should be able to read the label so it reads from NDS to DS.
+        - Use **Start hub hole (DS/NDS)** to rotate the pattern to match your build.
 
-## Hub numbering (exactly how the app numbers flange holes)
+        ---
 
-Let:
-- **N** = total rim/hub holes (e.g. 32)
-- **H** = holes per flange = **N/2** (e.g. 16)
+        ## Builder page (main workspace)
 
-Each flange is numbered:
-- **1..H clockwise as you look directly at that flange**
+        The Builder recalculates automatically as you change parameters.
 
-If your hub has no reference mark, no problem:
-- pick any physical hole as “1”
-- use **Start hub hole (DS / NDS)** to rotate the pattern so the table matches what you did.
+        ### Parameters panel
+        - **Basics:** wheel type, crosses, symmetry, invert heads
+        - **Starts:** start rim hole, start hub hole DS/NDS
+        - **Valve:** valve reference (right/left of valve)
+        - **Filters:** DS/NDS filter for the table + diagram
+        - **Reset defaults:** restores the default pattern (32H rear 3x)
 
----
+        **Valve clearance:** a "Valve area looks clear" indicator appears when the
+        termination pattern around the valve is open. In **Print view**, a badge
+        shows either clear or crowded.
 
-## What the Schraner steps mean (workshop interpretation)
+        ### Table view
+        - **Full table** shows every row; **Compact lookup** is mobile-friendly and
+          lets you query by rim hole, hub hole, or spoke/order.
+        - **Step filter buttons** (R1/R2/R3/L1/L3/L4) let you isolate phases.
+        - **Next step mode** shows one Schraner step at a time (Prev/Next controls).
+        - **Highlight mode** controls what lights up in the diagram.
+        - **Actions menu** (top-right of the table card):
+          - Copy visible rows as CSV
+          - Copy all rows as CSV
+          - Download CSV
+          - Print
+        - **Export CSV** inside the table header exports the currently visible rows
+          and columns (respects filters and column visibility).
 
-Think of **Step** as a *block of work*.
+        Hover any row to highlight the corresponding spoke in the diagram.
 
-### DS steps (do these first)
-- **R1** — place the two **reference spokes at the valve** (this anchors everything)
-- **R2** — DS **odd set fill**
-- **R3** — DS **even set weave**
+        ### Diagram view
+        - Use it to verify valve clearance and spoke routing.
+        - Hover rows in the table to highlight spokes here.
+        - DS/NDS filter limits which spokes render.
 
-### NDS steps (after flipping)
-- **L1** — NDS reference pair at the valve
-- **L3 / L4** — remaining NDS fills/weaves in Schraner order
+        ### Print view
+        - Forces the table view and adds a parameter summary.
+        - Intended for a clean bench reference.
 
-**You don’t need the theory to lace correctly.**  
-Just follow the **Order** column row-by-row.
+        ---
 
----
+        ## Flow page
 
-## Parameters (what each one changes)
+        The Flow page generates a **flowchart-style SVG** for the same pattern.
 
-### Holes
-Now selected from the **top bar**. Each hole count is a dedicated Builder page.
+        - Uses the same **Parameters panel** and DS/NDS filter.
+        - **Zoom in/out** buttons adjust the chart scale.
+        - **Open Print View** opens a clean, print-ready tab.
+        - **Download SVG** saves the diagram for notes or sharing.
 
-### Wheel type
-Rear vs Front.  
-Front still uses DS/NDS labels (rotor side = NDS).
+        ---
 
-### Crosses
-How many spokes each spoke crosses on its way to the rim:
-- 0x radial, 1x, 2x, 3x, 4x …
+        ## Presets
 
-The app blocks impossible combinations.
+        - **Save as...** stores the current parameters.
+        - **Update preset** appears when you modify a selected preset.
+        - **Delete** removes it (with confirmation).
 
-### Symmetry
-- **Symmetrical**: most common (start here)
-- **Asymmetrical**: patterns intentionally different by side (only use if you know why)
+        Presets are stored in the local backend database
+        (`backend/app/db.sqlite` by default).
 
-### Invert heads
-Flips the heads IN/OUT convention.
+        ---
 
-### Start rim hole
-Anchor for rim numbering (normally keep **1**).
+        ## Settings
 
-### Valve reference
-Whether the “start rim hole” is interpreted at the valve as:
-- **Right of valve** (clockwise), or
-- **Left of valve** (counter-clockwise)
+        - **Accent color** controls subtle highlight colors.
+        - **Table columns** lets you show/hide specific columns.
 
-### Start hub hole (DS / NDS)
-Rotates the pattern around each flange to match your physical starting point.
+        ---
 
-### DS/NDS (table filter)
-Filters the visible table rows by side. **All** shows both.
+        ## Keyboard shortcuts (Builder)
 
-### Settings (table columns)
-Use the **Settings** page in the top bar to hide or show columns like Order,
-Step, Side, Odd/Even set, K, and Notes.
+        - `/` focus the first parameter field
+        - `t` table tab
+        - `d` diagram tab
+        - `b` both tab
+        - `p` toggle print view
 
----
+        ---
 
-## Table columns (how to read each row)
+        ## Worked example (32H rear 3x)
 
-- **Spoke**: identifier (DS-01..DS-H, NDS-01..NDS-H)
-- **Order**: install order — follow top to bottom
-- **Step**: which Schraner block you’re in (R1/R2/R3/L1/L3/L4)
-- **Side**: DS or NDS
-- **Odd/Even set**: which interleaved set you’re filling
-- **k**: index within that set (“1st/2nd/3rd in this phase”)
-- **Hub hole**: physical hub hole number (after Start hub hole offset)
-- **Heads**: IN or OUT
-- **Rim hole**: physical rim hole number (1..N)
-- **Crosses described**: human-readable crossing description
-- **Notes**: extra guidance (reference spokes, odd fill, weave, etc.)
+        Common defaults:
+        - Holes: 32
+        - Wheel: rear
+        - Crosses: 3x
+        - Symmetry: symmetrical
+        - Start rim hole: 1
+        - Valve reference: right of valve
+        - Start hub hole DS/NDS: 1
 
-**Bonus:** Hover a row to highlight that spoke in the diagram.
+        In **Step R1**, the first two DS spokes should straddle the valve:
+        - One lands in **rim hole N (32)** = valve-left
+        - One lands in **rim hole 1** = valve-right
 
----
+        That is correct and anchors the rest of the lacing.
 
-## Worked example (32H rear 3x)
+        ---
 
-A very common build:
+        ## Troubleshooting
 
-- **Holes:** 32  
-- **Crosses:** 3x  
-- **Wheel:** Rear  
-- **Symmetry:** Symmetrical  
-- **Start rim hole:** 1  
-- **Valve reference:** Right of valve  
-- **Start hub hole DS/NDS:** 1
+        - **Spokes do not drop naturally into rim holes**
+          - Usually off by one at the valve, or starting at a different hub hole.
+          - Adjust **Start hub hole (DS)** by +/-1 and check again.
+        - **Valve area looks crowded**
+          - Confirm the R1 pair straddles **N and 1** at the valve.
+          - Try switching **Valve reference** or adjust **Start rim hole**.
+        - **Diagram looks busy**
+          - Use **Next step mode** or step filters.
+          - Use DS/NDS filter to isolate one side.
+        - **Front wheel DS/NDS confusion**
+          - Treat the **rotor side as NDS** in this app.
 
-### What you should see in Step R1
-The first two DS spokes should straddle the valve:
+        ---
 
-- One lands in **rim hole N (32)** = valve-left  
-- One lands in **rim hole 1** = valve-right  
+        ## Safety and sanity
 
-That’s correct and intentional: it anchors the rest of the lacing.
-
----
-
-## Troubleshooting (most common issues)
-
-- **“Spokes don’t want to drop into the rim holes naturally.”**  
-  Usually you’re off by one at the valve, or started on a different hub hole.  
-  Try adjusting **Start hub hole (DS)** by ±1 and see if it becomes “natural”.
-
-- **“Valve area looks wrong / crowded.”**  
-  Confirm the R1 pair straddles **N and 1** at the valve.
-
-- **“Diagram looks busy.”**  
-  Use **Next step mode** and/or select a single **Step** (R1 only, R2 only, etc).
-
-- **“Front wheel: what is DS?”**  
-  Treat the **rotor side as NDS** in this app.
-
----
-
-## Safety + sanity notes
-
-- During lacing, thread nipples only a few turns (no tension yet).
-- Keep the DS viewpoint in mind when thinking “clockwise”.
-- If anything feels forced, stop and re-check **R1** first.
-"""
+        - Thread nipples only a few turns during lacing (no tension yet).
+        - Keep the DS viewpoint in mind when thinking clockwise.
+        - If anything feels forced, stop and re-check **R1** first.
+        """
+    ).strip()
     return {"markdown": markdown}
 
 
