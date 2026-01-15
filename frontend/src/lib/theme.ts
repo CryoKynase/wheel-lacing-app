@@ -1,4 +1,4 @@
-export type AccentThemeId = "cobalt" | "teal" | "olive";
+export type AccentThemeId = "cobalt" | "teal" | "olive" | "rose";
 
 type AccentTokens = {
   primary: string;
@@ -46,6 +46,17 @@ export const accentThemes: AccentTheme[] = [
       primaryForeground: "210 40% 98%",
       ring: "94 30% 40%",
       accent: "94 30% 94%",
+    },
+  },
+  {
+    id: "rose",
+    label: "Rose",
+    description: "Warm rose accent with a bold pop.",
+    tokens: {
+      primary: "346 75% 45%",
+      primaryForeground: "210 40% 98%",
+      ring: "346 75% 52%",
+      accent: "346 60% 95%",
     },
   },
 ];
