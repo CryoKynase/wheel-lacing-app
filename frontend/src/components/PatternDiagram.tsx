@@ -9,10 +9,14 @@ export type PatternDiagramProps = {
   valveReference: "right_of_valve" | "left_of_valve";
   hoveredSpoke?: string | null;
   showLabels?: boolean;
-  view?: "classic" | "realistic";
+  showFaintSpokes?: boolean;
+  view?: "classic" | "realistic" | "engineer";
   curved?: boolean;
   occlusion?: boolean;
   shortArc?: boolean;
+  lookFrom?: "DS" | "NDS";
+  showRearFlange?: boolean;
+  showRearSpokes?: boolean;
 };
 
 const RIM_RADIUS = 160;
@@ -85,10 +89,14 @@ export default function PatternDiagram({
   valveReference,
   hoveredSpoke,
   showLabels = false,
+  showFaintSpokes = true,
   view = "classic",
   curved = true,
   occlusion = true,
   shortArc = true,
+  lookFrom = "DS",
+  showRearFlange = true,
+  showRearSpokes = true,
 }: PatternDiagramProps) {
   const occlusionId = useId();
   const h = holes / 2;
@@ -125,7 +133,7 @@ export default function PatternDiagram({
   // point OUTSIDE the rim for the text (prevents it “hugging” one side visually)
   const valveTextPoint = pointOnCircle(RIM_RADIUS + 26, valveAngle);
 
-  const spokeElements = rows.map((row) => {
+  const buildSpoke = (row: PatternRow, useOffset: boolean) => {
     const rimAngleDeg = rimAngle(holes, row.rimHole);
     const rim = pointOnCircle(RIM_RADIUS, rimAngleDeg);
     const hubAngleOffset = row.side === "DS" ? baseAngleDS : baseAngleNDS;
@@ -136,25 +144,36 @@ export default function PatternDiagram({
         ? hubRawDegDS(row.hubHole, hubStep) + hubAngleOffset
         : hubRawDegNDS(row.hubHole, hubStep) + hubAngleOffset;
     const hub = pointOnCircle(hubRadius, hubAngleDeg);
-    const hubX = hub.x + sideOffset;
+    const hubX = hub.x + (useOffset ? sideOffset : 0);
     const isHovered = hoveredSpoke === row.spoke;
     const isVisible = visibleSet.has(row.order);
-    const strokeOpacity = isHovered ? 1 : isVisible ? 0.85 : 0.12;
+    const strokeOpacity = isHovered
+      ? 1
+      : isVisible
+        ? 0.85
+        : showFaintSpokes
+          ? 0.12
+          : 0;
     const strokeWidth = isHovered ? 3.5 : isVisible ? 2.4 : 1;
 
-    if (view === "classic" || !curved) {
-      return (
-        <line
-          key={`${row.order}-${row.side}`}
-          x1={hubX}
-          y1={hub.y}
-          x2={rim.x}
-          y2={rim.y}
-          stroke="#334155"
-          strokeOpacity={strokeOpacity}
-          strokeWidth={strokeWidth}
-        />
-      );
+    if (view === "classic" || view === "engineer" || !curved) {
+      return {
+        element: (
+          <line
+            key={`${row.order}-${row.side}`}
+            x1={hubX}
+            y1={hub.y}
+            x2={rim.x}
+            y2={rim.y}
+            stroke="#334155"
+            strokeOpacity={strokeOpacity}
+            strokeWidth={strokeWidth}
+          />
+        ),
+        strokeOpacity,
+        strokeWidth,
+        isHovered,
+      };
     }
 
     const hubAngleRad = degToRad(hubAngleDeg);
@@ -178,16 +197,27 @@ export default function PatternDiagram({
       y: hub.y + tangentUnit.y * controlLen + radialUnit.y * radialLen,
     };
 
-    return (
-      <path
-        key={`${row.order}-${row.side}`}
-        d={`M ${hubX} ${hub.y} Q ${control.x} ${control.y} ${rim.x} ${rim.y}`}
-        fill="none"
-        stroke="#334155"
-        strokeOpacity={strokeOpacity}
-        strokeWidth={strokeWidth}
-      />
-    );
+    return {
+      element: (
+        <path
+          key={`${row.order}-${row.side}`}
+          d={`M ${hubX} ${hub.y} Q ${control.x} ${control.y} ${rim.x} ${rim.y}`}
+          fill="none"
+          stroke="#334155"
+          strokeOpacity={strokeOpacity}
+          strokeWidth={strokeWidth}
+        />
+      ),
+      strokeOpacity,
+      strokeWidth,
+      isHovered,
+    };
+  };
+
+  const spokeElements = rows.map((row) => buildSpoke(row, true).element);
+  const engineerSpokes = rows.map((row) => {
+    const { element, strokeOpacity, isHovered } = buildSpoke(row, false);
+    return { row, element, strokeOpacity, isHovered };
   });
 
   return (
@@ -211,7 +241,91 @@ export default function PatternDiagram({
           </mask>
         )}
       </defs>
-      {view === "realistic" && occlusion ? (
+      {view === "engineer" ? (
+        (() => {
+          const frontSide = lookFrom;
+          const rearSide = lookFrom === "DS" ? "NDS" : "DS";
+          const rearFlangeRadius =
+            rearSide === "DS" ? DS_FLANGE_RADIUS : NDS_FLANGE_RADIUS;
+          const frontFlangeRadius =
+            frontSide === "DS" ? DS_FLANGE_RADIUS : NDS_FLANGE_RADIUS;
+          const rearMaskId = `${occlusionId}-rear`;
+          const rearSpokes = engineerSpokes.filter(
+            ({ row }) => row.side === rearSide
+          );
+          const frontSpokes = engineerSpokes.filter(
+            ({ row }) => row.side === frontSide
+          );
+          const hoveredRear = rearSpokes.find(({ row }) => row.spoke === hoveredSpoke);
+          return (
+            <>
+              <defs>
+                {occlusion && (
+                  <mask id={rearMaskId}>
+                    <rect
+                      x="-220"
+                      y="-220"
+                      width="440"
+                      height="440"
+                      fill="#fff"
+                    />
+                    <circle cx={0} cy={0} r={hubBodyRadius} fill="#000" />
+                  </mask>
+                )}
+              </defs>
+              {showRearFlange && (
+                <circle
+                  cx={0}
+                  cy={0}
+                  r={rearFlangeRadius}
+                  fill="none"
+                  stroke="#cbd5f5"
+                  strokeWidth={1.1}
+                />
+              )}
+              {showRearSpokes && (
+                <g
+                  mask={occlusion ? `url(#${rearMaskId})` : undefined}
+                  opacity={0.45}
+                >
+                  {rearSpokes.map(({ element }) => element)}
+                </g>
+              )}
+              {showRearSpokes && hoveredRear && (
+                <g mask={occlusion ? `url(#${rearMaskId})` : undefined}>
+                  {hoveredRear.element}
+                </g>
+              )}
+              <circle cx={0} cy={0} r={hubBodyRadius} fill="#e2e8f0" />
+              <circle
+                cx={0}
+                cy={0}
+                r={frontFlangeRadius}
+                fill="none"
+                stroke={frontSide === "DS" ? "#64748b" : "#94a3b8"}
+                strokeWidth={1.6}
+              />
+              <text
+                x={frontFlangeRadius + 10}
+                y={-8}
+                fontSize={10}
+                fill="#334155"
+              >
+                {frontSide}
+              </text>
+              <text
+                x={-rearFlangeRadius - 18}
+                y={-8}
+                fontSize={10}
+                fill="#94a3b8"
+              >
+                {rearSide}
+              </text>
+              {frontSpokes.map(({ element }) => element)}
+            </>
+          );
+        })()
+      ) : view === "realistic" && occlusion ? (
         <g mask={`url(#${occlusionId})`}>{spokeElements}</g>
       ) : (
         spokeElements
@@ -229,30 +343,44 @@ export default function PatternDiagram({
         stroke="#475569"
         strokeWidth={2.2}
       />
-      <circle
-        cx={HUB_OFFSET}
-        cy={0}
-        r={DS_FLANGE_RADIUS}
-        fill="none"
-        stroke="#64748b"
-        strokeWidth={1.6}
-      />
-      <circle
-        cx={-HUB_OFFSET}
-        cy={0}
-        r={NDS_FLANGE_RADIUS}
-        fill="none"
-        stroke="#94a3b8"
-        strokeWidth={1.3}
-      />
-      <circle cx={0} cy={0} r={6} fill="#0f172a" />
+      {view !== "engineer" && (
+        <>
+          <circle
+            cx={HUB_OFFSET}
+            cy={0}
+            r={DS_FLANGE_RADIUS}
+            fill="none"
+            stroke="#64748b"
+            strokeWidth={1.6}
+          />
+          <circle
+            cx={-HUB_OFFSET}
+            cy={0}
+            r={NDS_FLANGE_RADIUS}
+            fill="none"
+            stroke="#94a3b8"
+            strokeWidth={1.3}
+          />
+          <circle cx={0} cy={0} r={6} fill="#0f172a" />
 
-      <text x={HUB_OFFSET + DS_FLANGE_RADIUS + 10} y={-8} fontSize={10} fill="#334155">
-        DS
-      </text>
-      <text x={-HUB_OFFSET - NDS_FLANGE_RADIUS - 18} y={-8} fontSize={10} fill="#334155">
-        NDS
-      </text>
+          <text
+            x={HUB_OFFSET + DS_FLANGE_RADIUS + 10}
+            y={-8}
+            fontSize={10}
+            fill="#334155"
+          >
+            DS
+          </text>
+          <text
+            x={-HUB_OFFSET - NDS_FLANGE_RADIUS - 18}
+            y={-8}
+            fontSize={10}
+            fill="#334155"
+          >
+            NDS
+          </text>
+        </>
+      )}
 
       {showLabels && (
         <g>
@@ -269,43 +397,47 @@ export default function PatternDiagram({
             Rim
           </text>
 
-          <line
-            x1={HUB_OFFSET + DS_FLANGE_RADIUS + 70}
-            y1={-8}
-            x2={HUB_OFFSET + DS_FLANGE_RADIUS}
-            y2={-8}
-            stroke="#94a3b8"
-            strokeWidth={1.2}
-            markerEnd="url(#diagram-arrow)"
-          />
-          <text
-            x={HUB_OFFSET + DS_FLANGE_RADIUS + 74}
-            y={-12}
-            textAnchor="start"
-            fontSize={10}
-            fill="#64748b"
-          >
-            DS Hub
-          </text>
+          {view !== "engineer" && (
+            <>
+              <line
+                x1={HUB_OFFSET + DS_FLANGE_RADIUS + 70}
+                y1={-8}
+                x2={HUB_OFFSET + DS_FLANGE_RADIUS}
+                y2={-8}
+                stroke="#94a3b8"
+                strokeWidth={1.2}
+                markerEnd="url(#diagram-arrow)"
+              />
+              <text
+                x={HUB_OFFSET + DS_FLANGE_RADIUS + 74}
+                y={-12}
+                textAnchor="start"
+                fontSize={10}
+                fill="#64748b"
+              >
+                DS Hub
+              </text>
 
-          <line
-            x1={-HUB_OFFSET - NDS_FLANGE_RADIUS - 70}
-            y1={-8}
-            x2={-HUB_OFFSET - NDS_FLANGE_RADIUS}
-            y2={-8}
-            stroke="#94a3b8"
-            strokeWidth={1.2}
-            markerEnd="url(#diagram-arrow)"
-          />
-          <text
-            x={-HUB_OFFSET - NDS_FLANGE_RADIUS - 74}
-            y={-12}
-            textAnchor="end"
-            fontSize={10}
-            fill="#64748b"
-          >
-            NDS Hub
-          </text>
+              <line
+                x1={-HUB_OFFSET - NDS_FLANGE_RADIUS - 70}
+                y1={-8}
+                x2={-HUB_OFFSET - NDS_FLANGE_RADIUS}
+                y2={-8}
+                stroke="#94a3b8"
+                strokeWidth={1.2}
+                markerEnd="url(#diagram-arrow)"
+              />
+              <text
+                x={-HUB_OFFSET - NDS_FLANGE_RADIUS - 74}
+                y={-12}
+                textAnchor="end"
+                fontSize={10}
+                fill="#64748b"
+              >
+                NDS Hub
+              </text>
+            </>
+          )}
 
           <line
             x1={170}
@@ -319,6 +451,16 @@ export default function PatternDiagram({
           <text x={176} y={64} textAnchor="start" fontSize={10} fill="#64748b">
             Spoke
           </text>
+          {view === "engineer" && (
+            <>
+              <text x={0} y={-176} textAnchor="middle" fontSize={9} fill="#64748b">
+                Front: {lookFrom}
+              </text>
+              <text x={0} y={-164} textAnchor="middle" fontSize={9} fill="#94a3b8">
+                Rear: {lookFrom === "DS" ? "NDS" : "DS"}
+              </text>
+            </>
+          )}
         </g>
       )}
 
@@ -370,24 +512,54 @@ export default function PatternDiagram({
                 row.hubHole === hole
             )
           : false;
+        const rearSide = lookFrom === "DS" ? "NDS" : "DS";
         return (
           <g key={`hub-${hole}`}>
-            <circle
-              cx={dsPoint.x + HUB_OFFSET}
-              cy={dsPoint.y}
-              r={hoveredDS ? 4.4 : 3.4}
-              fill={hoveredDS ? "#0f172a" : "#475569"}
-            >
-              <title>DS hub hole {hole}</title>
-            </circle>
-            <circle
-              cx={ndsPoint.x - HUB_OFFSET}
-              cy={ndsPoint.y}
-              r={hoveredNDS ? 4.2 : 3.2}
-              fill={hoveredNDS ? "#0f172a" : "#64748b"}
-            >
-              <title>NDS hub hole {hole}</title>
-            </circle>
+            {view === "engineer" ? (
+              <>
+                {(lookFrom === "DS" || showRearFlange) && (
+                  <circle
+                    cx={dsPoint.x}
+                    cy={dsPoint.y}
+                    r={hoveredDS ? 4.4 : 3.4}
+                    fill={hoveredDS ? "#0f172a" : "#475569"}
+                    opacity={lookFrom === "DS" ? 1 : 0.5}
+                  >
+                    <title>DS hub hole {hole}</title>
+                  </circle>
+                )}
+                {(lookFrom === "NDS" || showRearFlange) && (
+                  <circle
+                    cx={ndsPoint.x}
+                    cy={ndsPoint.y}
+                    r={hoveredNDS ? 4.2 : 3.2}
+                    fill={hoveredNDS ? "#0f172a" : "#64748b"}
+                    opacity={lookFrom === "NDS" ? 1 : 0.5}
+                  >
+                    <title>NDS hub hole {hole}</title>
+                  </circle>
+                )}
+              </>
+            ) : (
+              <>
+                <circle
+                  cx={dsPoint.x + HUB_OFFSET}
+                  cy={dsPoint.y}
+                  r={hoveredDS ? 4.4 : 3.4}
+                  fill={hoveredDS ? "#0f172a" : "#475569"}
+                >
+                  <title>DS hub hole {hole}</title>
+                </circle>
+                <circle
+                  cx={ndsPoint.x - HUB_OFFSET}
+                  cy={ndsPoint.y}
+                  r={hoveredNDS ? 4.2 : 3.2}
+                  fill={hoveredNDS ? "#0f172a" : "#64748b"}
+                >
+                  <title>NDS hub hole {hole}</title>
+                </circle>
+              </>
+            )}
           </g>
         );
       })}

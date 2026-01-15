@@ -70,6 +70,12 @@ const DIAGRAM_VIEW_KEY = "wheelweaver.diagram.view";
 const DIAGRAM_CURVED_KEY = "wheelweaver.diagram.curved";
 const DIAGRAM_OCCLUSION_KEY = "wheelweaver.diagram.occlusion";
 const DIAGRAM_SHORTARC_KEY = "wheelweaver.diagram.shortArc";
+const DIAGRAM_FAINT_SPOKES_KEY = "wheelweaver.diagram.faintSpokes";
+const DIAGRAM_ENGINEER_LOOK_KEY = "wheelweaver.diagram.engineer.lookFrom";
+const DIAGRAM_ENGINEER_REAR_FLANGE_KEY =
+  "wheelweaver.diagram.engineer.showRearFlange";
+const DIAGRAM_ENGINEER_REAR_SPOKES_KEY =
+  "wheelweaver.diagram.engineer.showRearSpokes";
 
 function readStoredBoolean(key: string, fallback: boolean) {
   if (typeof window === "undefined") {
@@ -87,7 +93,17 @@ function readStoredView() {
     return "classic" as const;
   }
   const stored = window.localStorage.getItem(DIAGRAM_VIEW_KEY);
-  return stored === "realistic" ? "realistic" : "classic";
+  return stored === "realistic" || stored === "engineer"
+    ? stored
+    : "classic";
+}
+
+function readStoredLookFrom() {
+  if (typeof window === "undefined") {
+    return "DS" as const;
+  }
+  const stored = window.localStorage.getItem(DIAGRAM_ENGINEER_LOOK_KEY);
+  return stored === "NDS" ? "NDS" : "DS";
 }
 
 function toCsv(rows: PatternRow[]) {
@@ -134,9 +150,9 @@ export default function Builder({ tableColumns }: BuilderProps) {
     "both"
   );
   const [showDiagramLabels, setShowDiagramLabels] = useState(false);
-  const [diagramView, setDiagramView] = useState<"classic" | "realistic">(
-    readStoredView
-  );
+  const [diagramView, setDiagramView] = useState<
+    "classic" | "realistic" | "engineer"
+  >(readStoredView);
   const [diagramCurved, setDiagramCurved] = useState(() =>
     readStoredBoolean(DIAGRAM_CURVED_KEY, true)
   );
@@ -145,6 +161,18 @@ export default function Builder({ tableColumns }: BuilderProps) {
   );
   const [diagramShortArc, setDiagramShortArc] = useState(() =>
     readStoredBoolean(DIAGRAM_SHORTARC_KEY, true)
+  );
+  const [diagramFaintSpokes, setDiagramFaintSpokes] = useState(() =>
+    readStoredBoolean(DIAGRAM_FAINT_SPOKES_KEY, true)
+  );
+  const [diagramLookFrom, setDiagramLookFrom] = useState<"DS" | "NDS">(
+    readStoredLookFrom
+  );
+  const [diagramShowRearFlange, setDiagramShowRearFlange] = useState(() =>
+    readStoredBoolean(DIAGRAM_ENGINEER_REAR_FLANGE_KEY, true)
+  );
+  const [diagramShowRearSpokes, setDiagramShowRearSpokes] = useState(() =>
+    readStoredBoolean(DIAGRAM_ENGINEER_REAR_SPOKES_KEY, true)
   );
   const [visibleRows, setVisibleRows] = useState<PatternRow[]>([]);
   const [highlightRows, setHighlightRows] = useState<PatternRow[]>([]);
@@ -382,6 +410,43 @@ export default function Builder({ tableColumns }: BuilderProps) {
     window.localStorage.setItem(DIAGRAM_SHORTARC_KEY, String(diagramShortArc));
   }, [diagramShortArc]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(
+      DIAGRAM_FAINT_SPOKES_KEY,
+      String(diagramFaintSpokes)
+    );
+  }, [diagramFaintSpokes]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(DIAGRAM_ENGINEER_LOOK_KEY, diagramLookFrom);
+  }, [diagramLookFrom]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(
+      DIAGRAM_ENGINEER_REAR_FLANGE_KEY,
+      String(diagramShowRearFlange)
+    );
+  }, [diagramShowRearFlange]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(
+      DIAGRAM_ENGINEER_REAR_SPOKES_KEY,
+      String(diagramShowRearSpokes)
+    );
+  }, [diagramShowRearSpokes]);
+
   const diagramControls = (
     <div className="flex flex-col gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
       <div className="flex flex-wrap items-center gap-3">
@@ -389,7 +454,7 @@ export default function Builder({ tableColumns }: BuilderProps) {
           View
         </span>
         <div className="inline-flex rounded-md border border-border bg-background p-1">
-          {(["classic", "realistic"] as const).map((option) => {
+          {(["classic", "realistic", "engineer"] as const).map((option) => {
             const active = diagramView === option;
             return (
               <Button
@@ -422,6 +487,19 @@ export default function Builder({ tableColumns }: BuilderProps) {
         >
           Labels
         </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className={`h-6 px-2 text-[11px] ${
+            diagramFaintSpokes
+              ? "border-primary/40 bg-primary/10 text-foreground"
+              : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
+          }`}
+          onClick={() => setDiagramFaintSpokes((prev) => !prev)}
+        >
+          Faint spokes
+        </Button>
       </div>
       {diagramView === "realistic" && (
         <div className="flex flex-wrap items-center gap-4 text-[11px]">
@@ -451,6 +529,54 @@ export default function Builder({ tableColumns }: BuilderProps) {
               onChange={(event) => setDiagramShortArc(event.target.checked)}
             />
             <span>Short-arc normalisation</span>
+          </label>
+        </div>
+      )}
+      {diagramView === "engineer" && (
+        <div className="flex flex-wrap items-center gap-4 text-[11px]">
+          <div className="inline-flex items-center gap-2">
+            <span className="text-[11px] font-semibold uppercase text-slate-500">
+              Look from
+            </span>
+            <div className="inline-flex rounded-md border border-border bg-background p-1">
+              {(["DS", "NDS"] as const).map((option) => {
+                const active = diagramLookFrom === option;
+                return (
+                  <Button
+                    key={option}
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDiagramLookFrom(option)}
+                    className={`rounded px-3 py-1.5 text-[11px] font-semibold transition ${
+                      active
+                        ? "bg-primary/10 text-foreground"
+                        : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
+                    }`}
+                  >
+                    {option}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+          <label className="inline-flex items-center gap-2">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-slate-700"
+              checked={diagramShowRearFlange}
+              onChange={(event) => setDiagramShowRearFlange(event.target.checked)}
+            />
+            <span>Show rear flange</span>
+          </label>
+          <label className="inline-flex items-center gap-2">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-slate-700"
+              checked={diagramShowRearSpokes}
+              onChange={(event) => setDiagramShowRearSpokes(event.target.checked)}
+            />
+            <span>Show rear spokes</span>
           </label>
         </div>
       )}
@@ -805,19 +931,23 @@ export default function Builder({ tableColumns }: BuilderProps) {
                           Hover a row in the table to highlight it here.
                         </p>
                         <div className="grid max-w-full gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
-                          <PatternDiagram
-                            holes={currentParams.holes}
-                            rows={data.rows}
-                            visibleRows={highlightRows}
-                            startRimHole={currentParams.startRimHole}
-                            valveReference={currentParams.valveReference}
-                            hoveredSpoke={hoveredSpoke}
-                            showLabels={showDiagramLabels}
-                            view={diagramView}
-                            curved={diagramCurved}
-                            occlusion={diagramOcclusion}
-                            shortArc={diagramShortArc}
-                          />
+                            <PatternDiagram
+                              holes={currentParams.holes}
+                              rows={data.rows}
+                              visibleRows={highlightRows}
+                              startRimHole={currentParams.startRimHole}
+                              valveReference={currentParams.valveReference}
+                              hoveredSpoke={hoveredSpoke}
+                              showLabels={showDiagramLabels}
+                              showFaintSpokes={diagramFaintSpokes}
+                              view={diagramView}
+                              curved={diagramCurved}
+                              occlusion={diagramOcclusion}
+                              shortArc={diagramShortArc}
+                              lookFrom={diagramLookFrom}
+                              showRearFlange={diagramShowRearFlange}
+                              showRearSpokes={diagramShowRearSpokes}
+                            />
                           <div className="hidden space-y-3 text-xs text-slate-600 lg:block">
                             <div className="text-[11px] font-semibold uppercase text-slate-500">
                               How to read this
@@ -891,10 +1021,14 @@ export default function Builder({ tableColumns }: BuilderProps) {
                                 valveReference={currentParams.valveReference}
                                 hoveredSpoke={hoveredSpoke}
                                 showLabels={showDiagramLabels}
+                                showFaintSpokes={diagramFaintSpokes}
                                 view={diagramView}
                                 curved={diagramCurved}
                                 occlusion={diagramOcclusion}
                                 shortArc={diagramShortArc}
+                                lookFrom={diagramLookFrom}
+                                showRearFlange={diagramShowRearFlange}
+                                showRearSpokes={diagramShowRearSpokes}
                               />
                               <div className="hidden space-y-3 text-xs text-slate-600 lg:block">
                                 <div className="text-[11px] font-semibold uppercase text-slate-500">
