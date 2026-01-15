@@ -1,3 +1,4 @@
+import { useId } from "react";
 import type { PatternRow } from "../lib/types";
 
 export type PatternDiagramProps = {
@@ -8,12 +9,19 @@ export type PatternDiagramProps = {
   valveReference: "right_of_valve" | "left_of_valve";
   hoveredSpoke?: string | null;
   showLabels?: boolean;
+  view?: "classic" | "realistic";
+  curved?: boolean;
+  occlusion?: boolean;
+  shortArc?: boolean;
 };
 
 const RIM_RADIUS = 160;
 const DS_FLANGE_RADIUS = 105;
 const NDS_FLANGE_RADIUS = 85;
 const HUB_OFFSET = 18;
+const CURVE_CONTROL_RATIO = 0.8;
+const CURVE_RADIAL_RATIO = 0.12;
+const HUB_BODY_RATIO = 0.65;
 
 function degToRad(deg: number) {
   return (deg * Math.PI) / 180;
@@ -39,15 +47,26 @@ function pointOnCircle(radius: number, angleDeg: number) {
   };
 }
 
+function wrapToPi(angleRad: number) {
+  const twoPi = Math.PI * 2;
+  let wrapped = angleRad % twoPi;
+  if (wrapped <= -Math.PI) {
+    wrapped += twoPi;
+  } else if (wrapped > Math.PI) {
+    wrapped -= twoPi;
+  }
+  return wrapped;
+}
+
 function effectiveStartRimHole(
   holes: number,
   startRimHole: number,
   valveReference: "right_of_valve" | "left_of_valve"
 ) {
   if (valveReference === "right_of_valve") {
-    return startRimHole;
+    return ((startRimHole - 2 + holes) % holes) + 1;
   }
-  return ((startRimHole - 2 + holes) % holes) + 1;
+  return startRimHole;
 }
 
 function wrapHole(holes: number, hole: number) {
@@ -66,9 +85,16 @@ export default function PatternDiagram({
   valveReference,
   hoveredSpoke,
   showLabels = false,
+  view = "classic",
+  curved = true,
+  occlusion = true,
+  shortArc = true,
 }: PatternDiagramProps) {
+  const occlusionId = useId();
   const h = holes / 2;
   const hubStep = 360 / h;
+  const hubBodyRadius =
+    Math.min(DS_FLANGE_RADIUS, NDS_FLANGE_RADIUS) * HUB_BODY_RATIO;
 
   const dsRef = findReference(rows, "DS", "Reference at valve");
   const ndsRef = findReference(rows, "NDS", "NDS start reference");
@@ -99,6 +125,71 @@ export default function PatternDiagram({
   // point OUTSIDE the rim for the text (prevents it “hugging” one side visually)
   const valveTextPoint = pointOnCircle(RIM_RADIUS + 26, valveAngle);
 
+  const spokeElements = rows.map((row) => {
+    const rimAngleDeg = rimAngle(holes, row.rimHole);
+    const rim = pointOnCircle(RIM_RADIUS, rimAngleDeg);
+    const hubAngleOffset = row.side === "DS" ? baseAngleDS : baseAngleNDS;
+    const sideOffset = row.side === "DS" ? HUB_OFFSET : -HUB_OFFSET;
+    const hubRadius = row.side === "DS" ? DS_FLANGE_RADIUS : NDS_FLANGE_RADIUS;
+    const hubAngleDeg =
+      row.side === "DS"
+        ? hubRawDegDS(row.hubHole, hubStep) + hubAngleOffset
+        : hubRawDegNDS(row.hubHole, hubStep) + hubAngleOffset;
+    const hub = pointOnCircle(hubRadius, hubAngleDeg);
+    const hubX = hub.x + sideOffset;
+    const isHovered = hoveredSpoke === row.spoke;
+    const isVisible = visibleSet.has(row.order);
+    const strokeOpacity = isHovered ? 1 : isVisible ? 0.85 : 0.12;
+    const strokeWidth = isHovered ? 3.5 : isVisible ? 2.4 : 1;
+
+    if (view === "classic" || !curved) {
+      return (
+        <line
+          key={`${row.order}-${row.side}`}
+          x1={hubX}
+          y1={hub.y}
+          x2={rim.x}
+          y2={rim.y}
+          stroke="#334155"
+          strokeOpacity={strokeOpacity}
+          strokeWidth={strokeWidth}
+        />
+      );
+    }
+
+    const hubAngleRad = degToRad(hubAngleDeg);
+    const rimAngleRad = degToRad(rimAngleDeg);
+    const delta = shortArc
+      ? wrapToPi(rimAngleRad - hubAngleRad)
+      : rimAngleRad - hubAngleRad;
+    const tangentSign = (delta >= 0 ? 1 : -1) * (row.side === "DS" ? 1 : -1);
+    const tangentUnit = {
+      x: -Math.sin(hubAngleRad) * tangentSign,
+      y: Math.cos(hubAngleRad) * tangentSign,
+    };
+    const radialUnit = {
+      x: hub.x / hubRadius,
+      y: hub.y / hubRadius,
+    };
+    const controlLen = hubRadius * CURVE_CONTROL_RATIO;
+    const radialLen = hubRadius * CURVE_RADIAL_RATIO;
+    const control = {
+      x: hubX + tangentUnit.x * controlLen + radialUnit.x * radialLen,
+      y: hub.y + tangentUnit.y * controlLen + radialUnit.y * radialLen,
+    };
+
+    return (
+      <path
+        key={`${row.order}-${row.side}`}
+        d={`M ${hubX} ${hub.y} Q ${control.x} ${control.y} ${rim.x} ${rim.y}`}
+        fill="none"
+        stroke="#334155"
+        strokeOpacity={strokeOpacity}
+        strokeWidth={strokeWidth}
+      />
+    );
+  });
+
   return (
     <svg viewBox="-220 -220 440 440" className="w-full h-[360px]">
       <defs>
@@ -113,36 +204,22 @@ export default function PatternDiagram({
         >
           <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8" />
         </marker>
+        {view === "realistic" && occlusion && (
+          <mask id={occlusionId}>
+            <rect x="-220" y="-220" width="440" height="440" fill="#fff" />
+            <circle cx={0} cy={0} r={hubBodyRadius} fill="#000" />
+          </mask>
+        )}
       </defs>
-      {rows.map((row) => {
-        const rim = pointOnCircle(RIM_RADIUS, rimAngle(holes, row.rimHole));
-        const hubAngleOffset = row.side === "DS" ? baseAngleDS : baseAngleNDS;
-        const sideOffset = row.side === "DS" ? HUB_OFFSET : -HUB_OFFSET;
-        const hubRadius = row.side === "DS" ? DS_FLANGE_RADIUS : NDS_FLANGE_RADIUS;
-        const hub = pointOnCircle(
-          hubRadius,
-          row.side === "DS"
-            ? hubRawDegDS(row.hubHole, hubStep) + hubAngleOffset
-            : hubRawDegNDS(row.hubHole, hubStep) + hubAngleOffset
-        );
-        const hubX = hub.x + sideOffset;
-        const isHovered = hoveredSpoke === row.spoke;
-        const isVisible = visibleSet.has(row.order);
-        const strokeOpacity = isHovered ? 1 : isVisible ? 0.85 : 0.12;
-        const strokeWidth = isHovered ? 3.5 : isVisible ? 2.4 : 1;
-        return (
-          <line
-            key={`${row.order}-${row.side}`}
-            x1={hubX}
-            y1={hub.y}
-            x2={rim.x}
-            y2={rim.y}
-            stroke="#334155"
-            strokeOpacity={strokeOpacity}
-            strokeWidth={strokeWidth}
-          />
-        );
-      })}
+      {view === "realistic" && occlusion ? (
+        <g mask={`url(#${occlusionId})`}>{spokeElements}</g>
+      ) : (
+        spokeElements
+      )}
+
+      {view === "realistic" && occlusion && (
+        <circle cx={0} cy={0} r={hubBodyRadius} fill="#e2e8f0" />
+      )}
 
       <circle
         cx={0}

@@ -66,6 +66,30 @@ const csvColumns: Array<keyof PatternRow> = [
   "notes",
 ];
 
+const DIAGRAM_VIEW_KEY = "wheelweaver.diagram.view";
+const DIAGRAM_CURVED_KEY = "wheelweaver.diagram.curved";
+const DIAGRAM_OCCLUSION_KEY = "wheelweaver.diagram.occlusion";
+const DIAGRAM_SHORTARC_KEY = "wheelweaver.diagram.shortArc";
+
+function readStoredBoolean(key: string, fallback: boolean) {
+  if (typeof window === "undefined") {
+    return fallback;
+  }
+  const stored = window.localStorage.getItem(key);
+  if (stored === null) {
+    return fallback;
+  }
+  return stored === "true";
+}
+
+function readStoredView() {
+  if (typeof window === "undefined") {
+    return "classic" as const;
+  }
+  const stored = window.localStorage.getItem(DIAGRAM_VIEW_KEY);
+  return stored === "realistic" ? "realistic" : "classic";
+}
+
 function toCsv(rows: PatternRow[]) {
   const header = csvColumns.join(",");
   const lines = rows.map((row) =>
@@ -110,6 +134,18 @@ export default function Builder({ tableColumns }: BuilderProps) {
     "both"
   );
   const [showDiagramLabels, setShowDiagramLabels] = useState(false);
+  const [diagramView, setDiagramView] = useState<"classic" | "realistic">(
+    readStoredView
+  );
+  const [diagramCurved, setDiagramCurved] = useState(() =>
+    readStoredBoolean(DIAGRAM_CURVED_KEY, true)
+  );
+  const [diagramOcclusion, setDiagramOcclusion] = useState(() =>
+    readStoredBoolean(DIAGRAM_OCCLUSION_KEY, true)
+  );
+  const [diagramShortArc, setDiagramShortArc] = useState(() =>
+    readStoredBoolean(DIAGRAM_SHORTARC_KEY, true)
+  );
   const [visibleRows, setVisibleRows] = useState<PatternRow[]>([]);
   const [highlightRows, setHighlightRows] = useState<PatternRow[]>([]);
   const [hoveredSpoke, setHoveredSpoke] = useState<string | null>(null);
@@ -317,6 +353,109 @@ export default function Builder({ tableColumns }: BuilderProps) {
       window.setTimeout(() => window.print(), 100);
     }
   }, [printMode]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(DIAGRAM_VIEW_KEY, diagramView);
+  }, [diagramView]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(DIAGRAM_CURVED_KEY, String(diagramCurved));
+  }, [diagramCurved]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(DIAGRAM_OCCLUSION_KEY, String(diagramOcclusion));
+  }, [diagramOcclusion]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.localStorage.setItem(DIAGRAM_SHORTARC_KEY, String(diagramShortArc));
+  }, [diagramShortArc]);
+
+  const diagramControls = (
+    <div className="flex flex-col gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="text-[11px] font-semibold uppercase text-slate-500">
+          View
+        </span>
+        <div className="inline-flex rounded-md border border-border bg-background p-1">
+          {(["classic", "realistic"] as const).map((option) => {
+            const active = diagramView === option;
+            return (
+              <Button
+                key={option}
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setDiagramView(option)}
+                className={`rounded px-3 py-1.5 text-[11px] font-semibold capitalize transition ${
+                  active
+                    ? "bg-primary/10 text-foreground"
+                    : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
+                }`}
+              >
+                {option}
+              </Button>
+            );
+          })}
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className={`h-6 px-2 text-[11px] ${
+            showDiagramLabels
+              ? "border-primary/40 bg-primary/10 text-foreground"
+              : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
+          }`}
+          onClick={() => setShowDiagramLabels((prev) => !prev)}
+        >
+          Labels
+        </Button>
+      </div>
+      {diagramView === "realistic" && (
+        <div className="flex flex-wrap items-center gap-4 text-[11px]">
+          <label className="inline-flex items-center gap-2">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-slate-700"
+              checked={diagramCurved}
+              onChange={(event) => setDiagramCurved(event.target.checked)}
+            />
+            <span>Curved spokes</span>
+          </label>
+          <label className="inline-flex items-center gap-2">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-slate-700"
+              checked={diagramOcclusion}
+              onChange={(event) => setDiagramOcclusion(event.target.checked)}
+            />
+            <span>Hub occlusion</span>
+          </label>
+          <label className="inline-flex items-center gap-2">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-slate-700"
+              checked={diagramShortArc}
+              onChange={(event) => setDiagramShortArc(event.target.checked)}
+            />
+            <span>Short-arc normalisation</span>
+          </label>
+        </div>
+      )}
+    </div>
+  );
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -660,44 +799,36 @@ export default function Builder({ tableColumns }: BuilderProps) {
                       </Button>
                     </CardHeader>
                     <CardContent className="pt-1.5">
-                      <p className="text-xs text-slate-600 lg:hidden">
-                        Hover a row in the table to highlight it here.
-                      </p>
-                      <div className="mt-2 grid max-w-full gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
-                        <PatternDiagram
-                          holes={currentParams.holes}
-                          rows={data.rows}
-                          visibleRows={highlightRows}
-                          startRimHole={currentParams.startRimHole}
-                          valveReference={currentParams.valveReference}
-                          hoveredSpoke={hoveredSpoke}
-                          showLabels={showDiagramLabels}
-                        />
-                        <div className="hidden space-y-3 text-xs text-slate-600 lg:block">
-                          <div className="text-[11px] font-semibold uppercase text-slate-500">
-                            How to read this
-                          </div>
-                          <p>
-                            Each line is a spoke path. Switch to Table or Both
-                            to filter steps or focus a specific spoke.
-                          </p>
-                          <div className="flex justify-end">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className={`h-6 px-2 text-[11px] ${
-                                showDiagramLabels
-                                  ? "border-primary/40 bg-primary/10 text-foreground"
-                                  : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
-                              }`}
-                              onClick={() => setShowDiagramLabels((prev) => !prev)}
-                            >
-                              Labels
-                            </Button>
-                          </div>
-                          <div className="pt-1 text-[11px] font-semibold uppercase text-slate-500">
-                            Spoke: {hoveredSpoke ?? "—"}
+                      <div className="space-y-3">
+                        {diagramControls}
+                        <p className="text-xs text-slate-600 lg:hidden">
+                          Hover a row in the table to highlight it here.
+                        </p>
+                        <div className="grid max-w-full gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
+                          <PatternDiagram
+                            holes={currentParams.holes}
+                            rows={data.rows}
+                            visibleRows={highlightRows}
+                            startRimHole={currentParams.startRimHole}
+                            valveReference={currentParams.valveReference}
+                            hoveredSpoke={hoveredSpoke}
+                            showLabels={showDiagramLabels}
+                            view={diagramView}
+                            curved={diagramCurved}
+                            occlusion={diagramOcclusion}
+                            shortArc={diagramShortArc}
+                          />
+                          <div className="hidden space-y-3 text-xs text-slate-600 lg:block">
+                            <div className="text-[11px] font-semibold uppercase text-slate-500">
+                              How to read this
+                            </div>
+                            <p>
+                              Each line is a spoke path. Switch to Table or Both
+                              to filter steps or focus a specific spoke.
+                            </p>
+                            <div className="pt-1 text-[11px] font-semibold uppercase text-slate-500">
+                              Spoke: {hoveredSpoke ?? "—"}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -737,50 +868,42 @@ export default function Builder({ tableColumns }: BuilderProps) {
                         </Button>
                       </CardHeader>
                       <CardContent className="pt-1.5">
-                        <div className="relative">
-                          <Badge
-                            variant="neutral"
-                            className={`pointer-events-none absolute left-3 top-3 transition-opacity duration-150 ${
-                              hoveredSpoke ? "opacity-100" : "opacity-0"
-                            }`}
-                          >
-                            Spoke: {hoveredSpoke ?? "—"}
-                          </Badge>
-                          <p className="text-xs text-slate-600 lg:hidden">
-                            Hover a row in the table to highlight it here.
-                          </p>
-                          <div className="mt-2 grid max-w-full gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
-                            <PatternDiagram
-                              holes={currentParams.holes}
-                              rows={data.rows}
-                              visibleRows={highlightRows}
-                              startRimHole={currentParams.startRimHole}
-                              valveReference={currentParams.valveReference}
-                              hoveredSpoke={hoveredSpoke}
-                              showLabels={showDiagramLabels}
-                            />
-                            <div className="hidden space-y-3 text-xs text-slate-600 lg:block">
-                              <div className="text-[11px] font-semibold uppercase text-slate-500">
-                                How to read this
-                              </div>
-                              <p>
-                                Each line is a spoke path. Hover rows in the table to
-                                highlight them here.
-                              </p>
-                              <div className="flex justify-end">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  className={`h-6 px-2 text-[11px] ${
-                                    showDiagramLabels
-                                      ? "border-primary/40 bg-primary/10 text-foreground"
-                                      : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
-                                  }`}
-                                  onClick={() => setShowDiagramLabels((prev) => !prev)}
-                                >
-                                  Labels
-                                </Button>
+                        <div className="space-y-3">
+                          {diagramControls}
+                          <div className="relative">
+                            <Badge
+                              variant="neutral"
+                              className={`pointer-events-none absolute left-3 top-3 transition-opacity duration-150 ${
+                                hoveredSpoke ? "opacity-100" : "opacity-0"
+                              }`}
+                            >
+                              Spoke: {hoveredSpoke ?? "—"}
+                            </Badge>
+                            <p className="text-xs text-slate-600 lg:hidden">
+                              Hover a row in the table to highlight it here.
+                            </p>
+                            <div className="mt-2 grid max-w-full gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
+                              <PatternDiagram
+                                holes={currentParams.holes}
+                                rows={data.rows}
+                                visibleRows={highlightRows}
+                                startRimHole={currentParams.startRimHole}
+                                valveReference={currentParams.valveReference}
+                                hoveredSpoke={hoveredSpoke}
+                                showLabels={showDiagramLabels}
+                                view={diagramView}
+                                curved={diagramCurved}
+                                occlusion={diagramOcclusion}
+                                shortArc={diagramShortArc}
+                              />
+                              <div className="hidden space-y-3 text-xs text-slate-600 lg:block">
+                                <div className="text-[11px] font-semibold uppercase text-slate-500">
+                                  How to read this
+                                </div>
+                                <p>
+                                  Each line is a spoke path. Hover rows in the table to
+                                  highlight them here.
+                                </p>
                               </div>
                             </div>
                           </div>
