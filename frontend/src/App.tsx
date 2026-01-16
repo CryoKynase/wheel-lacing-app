@@ -10,6 +10,7 @@ import {
 import Builder from "./routes/Builder";
 import Flow from "./routes/Flow";
 import Readme from "./routes/Readme";
+import About from "./routes/About";
 import Settings from "./routes/Settings";
 import { defaultPatternRequest } from "./lib/defaults";
 import { holeOptions, isHoleOption } from "./lib/holeOptions";
@@ -123,6 +124,9 @@ export default function App() {
               <NavLink to={flowPath} className={navLinkClass}>
                 Flowchart
               </NavLink>
+              <NavLink to="/about" className={navLinkClass}>
+                About
+              </NavLink>
               <NavLink to="/readme" className={navLinkClass}>
                 Readme
               </NavLink>
@@ -170,6 +174,7 @@ export default function App() {
               />
               <Route path="/flow/:holes" element={<Flow />} />
               <Route path="/readme" element={<Readme />} />
+              <Route path="/about" element={<About />} />
               <Route
                 path="/settings"
                 element={

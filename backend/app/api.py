@@ -1,7 +1,12 @@
 from datetime import datetime
+from email.message import EmailMessage
+import os
+import re
+import smtplib
 import textwrap
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
 from app.compute.schraner import compute_pattern
@@ -17,11 +22,68 @@ from app.presets import (
 )
 
 router = APIRouter(prefix="/api")
+EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+
+
+class ContactIn(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    email: str = Field(min_length=3, max_length=254)
+    message: str = Field(min_length=10, max_length=4000)
 
 
 @router.post("/pattern/compute", response_model=PatternResponse)
 def compute_pattern_endpoint(req: PatternRequest) -> PatternResponse:
     return compute_pattern(req)
+
+
+@router.post("/contact")
+def send_contact(payload: ContactIn) -> dict:
+    name = payload.name.strip()
+    email = payload.email.strip()
+    message = payload.message.strip()
+
+    if not EMAIL_RE.match(email):
+        raise HTTPException(status_code=400, detail="Invalid email address")
+
+    to_email = os.getenv("CONTACT_TO_EMAIL", "rlglazer@gmail.com")
+    smtp_host = os.getenv("SMTP_HOST")
+    smtp_port = int(os.getenv("SMTP_PORT", "587"))
+    smtp_user = os.getenv("SMTP_USERNAME")
+    smtp_pass = os.getenv("SMTP_PASSWORD")
+    smtp_from = os.getenv("SMTP_FROM") or smtp_user or to_email
+
+    if not smtp_host or not smtp_user or not smtp_pass:
+        raise HTTPException(
+            status_code=500,
+            detail="Email is not configured on the server (missing SMTP settings).",
+        )
+
+    subject = f"WheelWeaver contact: {name}"
+    body = (
+        "You received a message from the WheelWeaver contact form.\n\n"
+        f"Name: {name}\n"
+        f"Email: {email}\n\n"
+        "Message:\n"
+        f"{message}\n"
+    )
+
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = smtp_from
+    msg["To"] = to_email
+    msg["Reply-To"] = email
+    msg.set_content(body)
+
+    try:
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=15) as server:
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login(smtp_user, smtp_pass)
+            server.send_message(msg)
+        return {"ok": True}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Failed to send email.") from exc
 
 
 @router.get("/readme")
