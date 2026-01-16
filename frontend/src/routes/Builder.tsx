@@ -905,7 +905,7 @@ export default function Builder({ tableColumns }: BuilderProps) {
                 className="transition-all duration-200 data-[state=inactive]:translate-y-1 data-[state=inactive]:opacity-0 data-[state=active]:translate-y-0 data-[state=active]:opacity-100"
               >
                 {!printMode && (
-                  <Card className="border-l-4 border-l-primary/40 transition-all duration-200 ease-out">
+                  <Card className="border-l-4 border-l-primary/40 transition-all duration-200 ease-out lg:sticky lg:top-20 lg:z-30">
                     <CardHeader className="flex flex-wrap items-center gap-2 border-b border-border bg-muted/40 py-1.5">
                       <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase text-slate-500">
                         {sideFilter !== "All" && (
@@ -998,7 +998,7 @@ export default function Builder({ tableColumns }: BuilderProps) {
               >
                 <div className="space-y-2">
                   {!printMode && (
-                    <Card className="border-l-4 border-l-primary/40 transition-all duration-200 ease-out">
+                    <Card className="border-l-4 border-l-primary/40 transition-all duration-200 ease-out lg:sticky lg:top-20 lg:z-30">
                       <CardHeader className="flex flex-wrap items-center gap-2 border-b border-border bg-muted/40 py-1.5">
                       <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase text-slate-500">
                         {sideFilter !== "All" && (
