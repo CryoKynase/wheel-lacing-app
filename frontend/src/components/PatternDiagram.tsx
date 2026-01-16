@@ -62,15 +62,15 @@ function wrapToPi(angleRad: number) {
   return wrapped;
 }
 
-function effectiveStartRimHole(
+function valveRightHole(
   holes: number,
   startRimHole: number,
   valveReference: "right_of_valve" | "left_of_valve"
 ) {
   if (valveReference === "right_of_valve") {
-    return ((startRimHole - 2 + holes) % holes) + 1;
+    return startRimHole;
   }
-  return startRimHole;
+  return wrapHole(holes, startRimHole + 1);
 }
 
 function wrapHole(holes: number, hole: number) {
@@ -114,11 +114,7 @@ export default function PatternDiagram({
     ? rimAngle(holes, ndsRef.rimHole) - hubRawDegNDS(ndsRef.hubHole, hubStep)
     : baseAngleDS;
 
-  const valveRight = effectiveStartRimHole(
-    holes,
-    startRimHole,
-    valveReference
-  );
+  const valveRight = valveRightHole(holes, startRimHole, valveReference);
   const valveLeft = wrapHole(holes, valveRight - 1);
   const visibleSet = new Set(visibleRows.map((row) => row.order));
   const rimLabelSet = new Set<number>([1, valveLeft]);

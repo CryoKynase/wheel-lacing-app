@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import ParamPanel from "../components/ParamPanel";
@@ -165,6 +166,8 @@ export default function Builder({ tableColumns }: BuilderProps) {
   const [diagramFaintSpokes, setDiagramFaintSpokes] = useState(() =>
     readStoredBoolean(DIAGRAM_FAINT_SPOKES_KEY, true)
   );
+  const [diagramZoom, setDiagramZoom] = useState(1);
+  const [diagramPan, setDiagramPan] = useState({ x: 0, y: 0 });
   const [diagramLookFrom, setDiagramLookFrom] = useState<"DS" | "NDS">(
     readStoredLookFrom
   );
@@ -447,6 +450,12 @@ export default function Builder({ tableColumns }: BuilderProps) {
     );
   }, [diagramShowRearSpokes]);
 
+  useEffect(() => {
+    if (diagramZoom <= 1) {
+      setDiagramPan({ x: 0, y: 0 });
+    }
+  }, [diagramZoom]);
+
   const diagramControls = (
     <div className="flex flex-col gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
       <div className="flex flex-wrap items-center gap-3">
@@ -500,6 +509,20 @@ export default function Builder({ tableColumns }: BuilderProps) {
         >
           Faint spokes
         </Button>
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-semibold text-slate-500">-</span>
+          <input
+            type="range"
+            min={1}
+            max={2.5}
+            step={0.1}
+            value={diagramZoom}
+            onChange={(event) => setDiagramZoom(Number(event.target.value))}
+            aria-label="Diagram zoom"
+            className="h-1 w-24 accent-slate-700"
+          />
+          <span className="text-[11px] font-semibold text-slate-500">+</span>
+        </div>
       </div>
       {diagramView === "realistic" && (
         <div className="flex flex-wrap items-center gap-4 text-[11px]">
@@ -583,6 +606,29 @@ export default function Builder({ tableColumns }: BuilderProps) {
     </div>
   );
 
+  const handleDiagramPanStart = (
+    event: ReactPointerEvent<HTMLDivElement>
+  ) => {
+    if (diagramZoom <= 1) {
+      return;
+    }
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const startPan = diagramPan;
+    const handleMove = (moveEvent: PointerEvent) => {
+      const dx = moveEvent.clientX - startX;
+      const dy = moveEvent.clientY - startY;
+      setDiagramPan({ x: startPan.x + dx, y: startPan.y + dy });
+    };
+    const handleUp = () => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+    };
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp, { once: true });
+  };
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey || event.altKey) {
@@ -665,27 +711,6 @@ export default function Builder({ tableColumns }: BuilderProps) {
                   </div>
                 </details>
               </Card>
-              <Card>
-                <details className="group">
-                  <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-900">
-                    Presets
-                  </summary>
-                  <div className="px-4 pb-4">
-                    <PresetBar
-                      presets={presets}
-                      selectedPresetId={selectedPresetId}
-                      currentParams={currentParams}
-                      activePresetParams={activePresetParams}
-                      presetError={presetError}
-                      onSelect={handleSelectPreset}
-                      onSaveAs={handleSaveAs}
-                      onUpdate={handleUpdate}
-                      onDelete={handleDelete}
-                      busy={presetBusy}
-                    />
-                  </div>
-                </details>
-              </Card>
             </div>
             <div className="hidden space-y-4 lg:block lg:sticky lg:top-20">
               <Card>
@@ -697,22 +722,6 @@ export default function Builder({ tableColumns }: BuilderProps) {
                     valveStatus={valveStatus ?? undefined}
                     sideFilter={sideFilter}
                     onSideFilterChange={setSideFilter}
-                  />
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent>
-                  <PresetBar
-                    presets={presets}
-                    selectedPresetId={selectedPresetId}
-                    currentParams={currentParams}
-                    activePresetParams={activePresetParams}
-                    presetError={presetError}
-                    onSelect={handleSelectPreset}
-                    onSaveAs={handleSaveAs}
-                    onUpdate={handleUpdate}
-                    onDelete={handleDelete}
-                    busy={presetBusy}
                   />
                 </CardContent>
               </Card>
@@ -931,23 +940,40 @@ export default function Builder({ tableColumns }: BuilderProps) {
                           Hover a row in the table to highlight it here.
                         </p>
                         <div className="grid max-w-full gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
-                            <PatternDiagram
-                              holes={currentParams.holes}
-                              rows={data.rows}
-                              visibleRows={highlightRows}
-                              startRimHole={currentParams.startRimHole}
-                              valveReference={currentParams.valveReference}
-                              hoveredSpoke={hoveredSpoke}
-                              showLabels={showDiagramLabels}
-                              showFaintSpokes={diagramFaintSpokes}
-                              view={diagramView}
-                              curved={diagramCurved}
-                              occlusion={diagramOcclusion}
-                              shortArc={diagramShortArc}
-                              lookFrom={diagramLookFrom}
-                              showRearFlange={diagramShowRearFlange}
-                              showRearSpokes={diagramShowRearSpokes}
-                            />
+                          <div
+                            className={`relative h-[360px] w-full overflow-hidden rounded-md border border-slate-200 bg-white ${
+                              diagramZoom > 1
+                                ? "cursor-grab active:cursor-grabbing"
+                                : ""
+                            }`}
+                            onPointerDown={handleDiagramPanStart}
+                          >
+                            <div
+                              className="h-full w-full"
+                              style={{
+                                transform: `translate(${diagramPan.x}px, ${diagramPan.y}px) scale(${diagramZoom})`,
+                                transformOrigin: "center",
+                              }}
+                            >
+                              <PatternDiagram
+                                holes={currentParams.holes}
+                                rows={data.rows}
+                                visibleRows={highlightRows}
+                                startRimHole={currentParams.startRimHole}
+                                valveReference={currentParams.valveReference}
+                                hoveredSpoke={hoveredSpoke}
+                                showLabels={showDiagramLabels}
+                                showFaintSpokes={diagramFaintSpokes}
+                                view={diagramView}
+                                curved={diagramCurved}
+                                occlusion={diagramOcclusion}
+                                shortArc={diagramShortArc}
+                                lookFrom={diagramLookFrom}
+                                showRearFlange={diagramShowRearFlange}
+                                showRearSpokes={diagramShowRearSpokes}
+                              />
+                            </div>
+                          </div>
                           <div className="hidden space-y-3 text-xs text-slate-600 lg:block">
                             <div className="text-[11px] font-semibold uppercase text-slate-500">
                               How to read this
@@ -1000,40 +1026,57 @@ export default function Builder({ tableColumns }: BuilderProps) {
                       <CardContent className="pt-1.5">
                         <div className="space-y-3">
                           {diagramControls}
-                          <div className="relative">
-                            <Badge
-                              variant="neutral"
-                              className={`pointer-events-none absolute left-3 top-3 transition-opacity duration-150 ${
-                                hoveredSpoke ? "opacity-100" : "opacity-0"
+                        <div className="relative">
+                          <Badge
+                            variant="neutral"
+                            className={`pointer-events-none absolute left-3 top-3 transition-opacity duration-150 ${
+                              hoveredSpoke ? "opacity-100" : "opacity-0"
+                            }`}
+                          >
+                            Spoke: {hoveredSpoke ?? "—"}
+                          </Badge>
+                          <p className="text-xs text-slate-600 lg:hidden">
+                            Hover a row in the table to highlight it here.
+                          </p>
+                          <div className="mt-2 grid max-w-full gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
+                            <div
+                              className={`relative h-[360px] w-full overflow-hidden rounded-md border border-slate-200 bg-white ${
+                                diagramZoom > 1
+                                  ? "cursor-grab active:cursor-grabbing"
+                                  : ""
                               }`}
+                              onPointerDown={handleDiagramPanStart}
                             >
-                              Spoke: {hoveredSpoke ?? "—"}
-                            </Badge>
-                            <p className="text-xs text-slate-600 lg:hidden">
-                              Hover a row in the table to highlight it here.
-                            </p>
-                            <div className="mt-2 grid max-w-full gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
-                              <PatternDiagram
-                                holes={currentParams.holes}
-                                rows={data.rows}
-                                visibleRows={highlightRows}
-                                startRimHole={currentParams.startRimHole}
-                                valveReference={currentParams.valveReference}
-                                hoveredSpoke={hoveredSpoke}
-                                showLabels={showDiagramLabels}
-                                showFaintSpokes={diagramFaintSpokes}
-                                view={diagramView}
-                                curved={diagramCurved}
-                                occlusion={diagramOcclusion}
-                                shortArc={diagramShortArc}
-                                lookFrom={diagramLookFrom}
-                                showRearFlange={diagramShowRearFlange}
-                                showRearSpokes={diagramShowRearSpokes}
-                              />
-                              <div className="hidden space-y-3 text-xs text-slate-600 lg:block">
-                                <div className="text-[11px] font-semibold uppercase text-slate-500">
-                                  How to read this
-                                </div>
+                              <div
+                                className="h-full w-full"
+                                style={{
+                                  transform: `translate(${diagramPan.x}px, ${diagramPan.y}px) scale(${diagramZoom})`,
+                                  transformOrigin: "center",
+                                }}
+                              >
+                                <PatternDiagram
+                                  holes={currentParams.holes}
+                                  rows={data.rows}
+                                  visibleRows={highlightRows}
+                                  startRimHole={currentParams.startRimHole}
+                                  valveReference={currentParams.valveReference}
+                                  hoveredSpoke={hoveredSpoke}
+                                  showLabels={showDiagramLabels}
+                                  showFaintSpokes={diagramFaintSpokes}
+                                  view={diagramView}
+                                  curved={diagramCurved}
+                                  occlusion={diagramOcclusion}
+                                  shortArc={diagramShortArc}
+                                  lookFrom={diagramLookFrom}
+                                  showRearFlange={diagramShowRearFlange}
+                                  showRearSpokes={diagramShowRearSpokes}
+                                />
+                              </div>
+                            </div>
+                            <div className="hidden space-y-3 text-xs text-slate-600 lg:block">
+                              <div className="text-[11px] font-semibold uppercase text-slate-500">
+                                How to read this
+                              </div>
                                 <p>
                                   Each line is a spoke path. Hover rows in the table to
                                   highlight them here.

@@ -79,7 +79,7 @@ export default function App() {
   const isFlowActive = Boolean(flowMatch);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="min-h-screen bg-[hsl(var(--accent))] text-slate-900">
       <div className="min-h-screen">
         <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
           <div className="grid items-center gap-3 px-6 py-4 sm:grid-cols-[1fr_auto_1fr]">
@@ -121,7 +121,7 @@ export default function App() {
                 Builder
               </NavLink>
               <NavLink to={flowPath} className={navLinkClass}>
-                Flow
+                Flowchart
               </NavLink>
               <NavLink to="/readme" className={navLinkClass}>
                 Readme
