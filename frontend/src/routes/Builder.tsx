@@ -169,6 +169,7 @@ export default function Builder({ tableColumns }: BuilderProps) {
   );
   const [diagramZoom, setDiagramZoom] = useState(1);
   const [diagramPan, setDiagramPan] = useState({ x: 0, y: 0 });
+  const [diagramLocked, setDiagramLocked] = useState(true);
   const [diagramLookFrom, setDiagramLookFrom] = useState<"DS" | "NDS">(
     readStoredLookFrom
   );
@@ -570,6 +571,19 @@ export default function Builder({ tableColumns }: BuilderProps) {
           />
           <span className="text-[11px] font-semibold text-slate-500">+</span>
         </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className={`h-6 px-2 text-[11px] ${
+            diagramLocked
+              ? "border-primary/40 bg-primary/10 text-foreground"
+              : "text-muted-foreground hover:bg-accent/40 hover:text-foreground"
+          }`}
+          onClick={() => setDiagramLocked((prev) => !prev)}
+        >
+          {diagramLocked ? "Lock Diagram" : "Unlock Diagram"}
+        </Button>
       </div>
       {diagramView === "realistic" && (
         <div className="flex flex-wrap items-center gap-4 text-[11px]">
@@ -676,6 +690,10 @@ export default function Builder({ tableColumns }: BuilderProps) {
     window.addEventListener("pointerup", handleUp, { once: true });
   };
 
+  const diagramCardClass = `border-l-4 border-l-primary/40 transition-all duration-200 ease-out ${
+    diagramLocked ? "lg:sticky lg:top-20 lg:z-30" : ""
+  }`;
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey || event.altKey) {
@@ -731,10 +749,6 @@ export default function Builder({ tableColumns }: BuilderProps) {
             {`Preset: ${presetSummaryLabel}`}
           </div>
         ) : null}
-      </div>
-
-      <div className="!mt-3">
-        <SchranerIntro />
       </div>
 
       <div className="!mt-3 space-y-6 lg:grid lg:grid-cols-[380px_1fr] lg:gap-6 lg:space-y-0">
@@ -958,7 +972,7 @@ export default function Builder({ tableColumns }: BuilderProps) {
                 className="transition-all duration-200 data-[state=inactive]:translate-y-1 data-[state=inactive]:opacity-0 data-[state=active]:translate-y-0 data-[state=active]:opacity-100"
               >
                 {!printMode && (
-                  <Card className="border-l-4 border-l-primary/40 transition-all duration-200 ease-out lg:sticky lg:top-20 lg:z-30">
+                  <Card className={diagramCardClass}>
                     <CardHeader className="flex flex-wrap items-center gap-2 border-b border-border bg-muted/40 py-1.5">
                       <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase text-slate-500">
                         {sideFilter !== "All" && (
@@ -1051,7 +1065,7 @@ export default function Builder({ tableColumns }: BuilderProps) {
               >
                 <div className="space-y-2">
                   {!printMode && (
-                    <Card className="border-l-4 border-l-primary/40 transition-all duration-200 ease-out lg:sticky lg:top-20 lg:z-30">
+                    <Card className={diagramCardClass}>
                       <CardHeader className="flex flex-wrap items-center gap-2 border-b border-border bg-muted/40 py-1.5">
                       <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase text-slate-500">
                         {sideFilter !== "All" && (
