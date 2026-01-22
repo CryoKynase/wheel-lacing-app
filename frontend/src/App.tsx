@@ -15,6 +15,7 @@ import Readme from "./routes/Readme";
 import About from "./routes/About";
 import Settings from "./routes/Settings";
 import Privacy from "./routes/Privacy";
+import NotFound from "./routes/NotFound";
 import { defaultPatternRequest } from "./lib/defaults";
 import { holeOptions, isHoleOption } from "./lib/holeOptions";
 import {
@@ -109,6 +110,13 @@ export default function App() {
 
   useEffect(() => {
     initializeAnalytics();
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+    document.dispatchEvent(new Event("prerender-ready"));
   }, []);
 
   useEffect(() => {
@@ -300,9 +308,9 @@ export default function App() {
               <Route
                 path="/"
                 element={
-                  <Navigate
-                    to={`/builder/${defaultPatternRequest.holes}`}
-                    replace
+                  <Builder
+                    tableColumns={tableColumns}
+                    fallbackHoles={selectedHoles}
                   />
                 }
               />
@@ -317,9 +325,7 @@ export default function App() {
               />
               <Route
                 path="/builder/:holes"
-                element={
-                  <Builder tableColumns={tableColumns} />
-                }
+                element={<Builder tableColumns={tableColumns} />}
               />
               <Route
                 path="/flow"
@@ -345,6 +351,7 @@ export default function App() {
                   />
                 }
               />
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </div>
         </main>

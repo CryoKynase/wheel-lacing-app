@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import { tableColumnLabels, type TableColumnVisibility } from "../lib/tableSettings";
 import {
   accentThemes,
   type AccentThemeId,
 } from "../lib/theme";
+import Seo from "../components/Seo";
+import { getSeoMetadata } from "../lib/seo";
 import {
   grantAnalyticsConsent,
   hasAnalyticsConsent,
@@ -44,9 +47,11 @@ export default function Settings({
   accentThemeId,
   onAccentThemeChange,
 }: SettingsProps) {
+  const location = useLocation();
   const [consentGranted, setConsentGranted] = useState(false);
   const [internalTraffic, setInternalTraffic] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
+  const seo = getSeoMetadata({ pathname: location.pathname });
 
   const showDevTools = useMemo(() => shouldShowDevTools(), []);
 
@@ -58,6 +63,7 @@ export default function Settings({
 
   return (
     <section className="space-y-6">
+      <Seo {...seo} />
       <div>
         <h1 className="text-2xl font-semibold">Settings</h1>
         <p className="mt-1 text-sm text-slate-600">

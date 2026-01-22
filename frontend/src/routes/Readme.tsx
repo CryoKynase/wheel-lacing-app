@@ -1,13 +1,17 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 
+import Seo from "../components/Seo";
 import { fetchReadme } from "../lib/api";
+import { getSeoMetadata } from "../lib/seo";
 
 export default function Readme() {
+  const location = useLocation();
   const [markdown, setMarkdown] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const seo = getSeoMetadata({ pathname: location.pathname });
 
   useEffect(() => {
     let active = true;
@@ -29,6 +33,7 @@ export default function Readme() {
 
   return (
     <section className="space-y-4">
+      <Seo {...seo} />
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Readme</h1>
         <Link

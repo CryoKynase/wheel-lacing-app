@@ -41,3 +41,10 @@ npm run build
 ```
 
 The Vite dev server is configured to use port 5177.
+
+## SEO
+
+- Update per-route titles/descriptions in `frontend/src/lib/seo.ts`.
+- Add or remove prerendered routes in `frontend/vite.config.ts`.
+- Keep `frontend/public/sitemap.xml` in sync with indexable routes.
+- Refresh the preview image at `frontend/public/og-image.png` when branding changes.

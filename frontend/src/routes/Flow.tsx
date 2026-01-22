@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import ComputeStatus from "../components/ComputeStatus";
 import FlowDiagram from "../components/FlowDiagram";
 import ParamPanel from "../components/ParamPanel";
+import Seo from "../components/Seo";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
 import { computePattern } from "../lib/api";
 import { defaultPatternRequest } from "../lib/defaults";
 import { isHoleOption } from "../lib/holeOptions";
 import { normalizeParamsForHoles } from "../lib/pattern";
+import { getSeoMetadata } from "../lib/seo";
 import { trackEvent } from "../lib/analytics";
 import type { PatternRequest, PatternResponse } from "../lib/types";
 
@@ -17,12 +19,17 @@ const zoomLevels = [0.6, 0.8, 1, 1.2, 1.4, 1.6];
 
 export default function Flow() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { holes: holesParam } = useParams();
   const parsedHoles = Number(holesParam);
   const hasValidHolesParam = isHoleOption(parsedHoles);
   const holes = hasValidHolesParam
     ? parsedHoles
     : defaultPatternRequest.holes;
+  const seo = useMemo(
+    () => getSeoMetadata({ pathname: location.pathname, holes }),
+    [location.pathname, holes]
+  );
   const [data, setData] = useState<PatternResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -171,7 +178,9 @@ export default function Flow() {
   );
 
   return (
-    <section className="space-y-6">
+    <>
+      <Seo {...seo} />
+      <section className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Flow</h1>
@@ -303,6 +312,7 @@ export default function Flow() {
           )}
         </div>
       </div>
-    </section>
+      </section>
+    </>
   );
 }

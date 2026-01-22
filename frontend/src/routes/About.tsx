@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import {
   Card,
@@ -8,6 +9,8 @@ import {
 } from "@/components/ui/Card";
 import { Input } from "@/components/ui/input";
 import InlineAlert from "@/components/ui/InlineAlert";
+import Seo from "../components/Seo";
+import { getSeoMetadata } from "../lib/seo";
 
 const API_BASE = (import.meta.env.VITE_API_BASE || "").replace(/\/$/, "");
 
@@ -22,12 +25,14 @@ function isValidEmail(email: string) {
 }
 
 export default function About() {
+  const location = useLocation();
   const currentYear = new Date().getFullYear();
   const copyright = useMemo(
     () =>
       `© 2024–${currentYear} WheelWeaver. All rights reserved.`,
     [currentYear]
   );
+  const seo = getSeoMetadata({ pathname: location.pathname });
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -104,6 +109,7 @@ export default function About() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-4">
+      <Seo {...seo} />
       <Card>
         <CardHeader>
           <CardTitle>Contact</CardTitle>

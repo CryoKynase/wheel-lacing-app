@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 
 import ParamPanel from "../components/ParamPanel";
 import PatternDiagram from "../components/PatternDiagram";
@@ -8,6 +9,7 @@ import PatternTable from "../components/PatternTable";
 import PresetBar from "../components/PresetBar";
 import SchranerIntro from "../components/SchranerIntro";
 import ComputeStatus from "../components/ComputeStatus";
+import Seo from "../components/Seo";
 import {
   Card,
   CardContent,
@@ -41,6 +43,7 @@ import {
 import { defaultPatternRequest } from "../lib/defaults";
 import { isHoleOption } from "../lib/holeOptions";
 import { normalizeParamsForHoles } from "../lib/pattern";
+import { getSeoMetadata, getSoftwareApplicationJsonLd } from "../lib/seo";
 import type { TableColumnVisibility } from "../lib/tableSettings";
 import { evaluateValveClearance } from "../lib/valveClearance";
 import { trackEvent } from "../lib/analytics";
@@ -53,6 +56,7 @@ import type {
 
 type BuilderProps = {
   tableColumns: TableColumnVisibility;
+  fallbackHoles?: number;
 };
 
 const csvColumns: Array<keyof PatternRow> = [
@@ -122,15 +126,26 @@ function toCsv(rows: PatternRow[]) {
   return [header, ...lines].join("\n");
 }
 
-export default function Builder({ tableColumns }: BuilderProps) {
+export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const { holes: holesParam } = useParams();
   const parsedHoles = Number(holesParam);
   const hasValidHolesParam = isHoleOption(parsedHoles);
   const holes = hasValidHolesParam
     ? parsedHoles
-    : defaultPatternRequest.holes;
+    : fallbackHoles ?? defaultPatternRequest.holes;
+  const seo = useMemo(
+    () => getSeoMetadata({ pathname: location.pathname, holes }),
+    [location.pathname, holes]
+  );
+  const jsonLd = useMemo(() => {
+    if (location.pathname !== "/") {
+      return null;
+    }
+    return getSoftwareApplicationJsonLd();
+  }, [location.pathname]);
   const [data, setData] = useState<PatternResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -759,7 +774,16 @@ export default function Builder({ tableColumns }: BuilderProps) {
   }, []);
 
   return (
-    <section className="space-y-6">
+    <>
+      <Seo {...seo} />
+      {jsonLd ? (
+        <Helmet>
+          <script type="application/ld+json">
+            {JSON.stringify(jsonLd)}
+          </script>
+        </Helmet>
+      ) : null}
+      <section className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Builder</h1>
@@ -1253,6 +1277,7 @@ export default function Builder({ tableColumns }: BuilderProps) {
           )}
         </div>
       </div>
-    </section>
+      </section>
+    </>
   );
 }

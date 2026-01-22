@@ -1,8 +1,14 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import Seo from "../components/Seo";
+import { getSeoMetadata } from "../lib/seo";
 
 export default function Privacy() {
+  const location = useLocation();
+  const seo = getSeoMetadata({ pathname: location.pathname });
+
   return (
     <section className="space-y-6">
+      <Seo {...seo} />
       <div>
         <h1 className="text-2xl font-semibold">Privacy & cookies</h1>
         <p className="mt-1 text-sm text-slate-600">
