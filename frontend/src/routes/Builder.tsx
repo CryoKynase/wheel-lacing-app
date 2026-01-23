@@ -6,7 +6,6 @@ import { Helmet } from "react-helmet-async";
 import ParamPanel from "../components/ParamPanel";
 import PatternDiagram from "../components/PatternDiagram";
 import PatternTable from "../components/PatternTable";
-import PresetBar from "../components/PresetBar";
 import ComputeStatus from "../components/ComputeStatus";
 import Seo from "../components/Seo";
 import {
@@ -31,14 +30,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
-import {
-  computePattern,
-  createPreset,
-  deletePreset,
-  getPreset,
-  listPresets,
-  updatePreset,
-} from "../lib/api";
+import { createPreset, deletePreset, getPreset, listPresets, updatePreset } from "../lib/api";
 import { defaultPatternRequest } from "../lib/defaults";
 import { normalizeParamsForHoles } from "../lib/pattern";
 import { getSeoMetadata, getSoftwareApplicationJsonLd } from "../lib/seo";
@@ -48,11 +40,11 @@ import { trackEvent } from "../lib/analytics";
 import {
   METHODS,
   getMethod,
-  groupsForStep,
+  isInActiveStep,
   normalizeHolesForMethod,
   normalizeMethodId,
 } from "../methods/registry";
-import type { MethodId, StepId } from "../methods/types";
+import type { LacingMethod, MethodId, PatternResult, StepId } from "../methods/types";
 import type {
   PatternRequest,
   PatternResponse,
@@ -118,6 +110,65 @@ function readStoredLookFrom() {
   return stored === "NDS" ? "NDS" : "DS";
 }
 
+function defaultsForMethod(method: LacingMethod) {
+  return method.params.reduce<Record<string, unknown>>((acc, def) => {
+    acc[def.key] = def.default;
+    return acc;
+  }, {});
+}
+
+function buildParamsByMethod() {
+  return Object.values(METHODS).reduce<Record<MethodId, Record<string, unknown>>>(
+    (acc, method) => {
+      acc[method.id] = defaultsForMethod(method);
+      return acc;
+    },
+    {} as Record<MethodId, Record<string, unknown>>
+  );
+}
+
+function formatCrosses(crosses: number) {
+  if (crosses === 0) {
+    return "0x radial";
+  }
+  return `${crosses}x (over ${crosses - 1}, under 1)`;
+}
+
+function shallowEqual(
+  left: Record<string, unknown>,
+  right: Record<string, unknown>
+) {
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  if (leftKeys.length !== rightKeys.length) {
+    return false;
+  }
+  return leftKeys.every((key) => left[key] === right[key]);
+}
+
+function rowsFromResult(methodId: MethodId, result: PatternResult): PatternRow[] {
+  if (methodId === "schraner" && result.table?.rows) {
+    return result.table.rows as PatternRow[];
+  }
+  return result.spokes.map((spoke) => ({
+    spoke: `${spoke.side === "right" ? "R" : "L"}-${String(
+      spoke.hubHole
+    ).padStart(2, "0")}`,
+    order: spoke.spokeIndex,
+    step: `Step ${spoke.group}`,
+    side: spoke.side === "right" ? "DS" : "NDS",
+    oddEvenSet: spoke.hubHole % 2 === 1 ? "Odd" : "Even",
+    k: spoke.hubHole,
+    hubHole: spoke.hubHole,
+    heads: spoke.head === "out" ? "OUT" : "IN",
+    rimHole: spoke.rimHole,
+    crossesDescribed:
+      typeof spoke.crosses === "number" ? formatCrosses(spoke.crosses) : "",
+    notes: "",
+    group: spoke.group,
+  }));
+}
+
 function toCsv(rows: PatternRow[]) {
   const header = csvColumns.join(",");
   const lines = rows.map((row) =>
@@ -165,18 +216,15 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [activeStep, setActiveStep] = useState<StepId>("all");
+  const [paramsByMethod, setParamsByMethod] = useState<
+    Record<MethodId, Record<string, unknown>>
+  >(buildParamsByMethod);
   const [presetError, setPresetError] = useState<string | null>(null);
   const [presets, setPresets] = useState<PresetSummary[]>([]);
   const [presetBusy, setPresetBusy] = useState(false);
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
-  const [currentParams, setCurrentParams] = useState<PatternRequest>(() =>
-    normalizeParamsForHoles(defaultPatternRequest, holes)
-  );
   const [activePresetParams, setActivePresetParams] =
     useState<PatternRequest | null>(null);
-  const [seedValues, setSeedValues] = useState<PatternRequest>(() =>
-    normalizeParamsForHoles(defaultPatternRequest, holes)
-  );
   const [printMode, setPrintMode] = useState(false);
   const [resultsTab, setResultsTab] = useState<"table" | "diagram" | "both">(
     "both"
@@ -213,6 +261,27 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
   const [highlightRows, setHighlightRows] = useState<PatternRow[]>([]);
   const [hoveredSpoke, setHoveredSpoke] = useState<string | null>(null);
   const [sideFilter, setSideFilter] = useState<"All" | "DS" | "NDS">("All");
+  const activeParams = useMemo(
+    () => ({
+      ...defaultsForMethod(method),
+      ...(paramsByMethod[methodId] ?? {}),
+    }),
+    [method, methodId, paramsByMethod]
+  );
+  const schranerParams = useMemo(() => {
+    if (methodId !== "schraner") {
+      return null;
+    }
+    const merged = {
+      ...defaultPatternRequest,
+      ...activeParams,
+    } as PatternRequest;
+    return normalizeParamsForHoles(merged, holes);
+  }, [activeParams, holes, methodId]);
+  const schranerParamsSafe =
+    schranerParams ?? normalizeParamsForHoles(defaultPatternRequest, holes);
+  const diagramParams =
+    methodId === "schraner" ? schranerParamsSafe : defaultPatternRequest;
   const tableRows = visibleRows.length ? visibleRows : data?.rows ?? [];
   const supportsSteps = Boolean(method.supportsSteps);
   const hasData = Boolean(data);
@@ -264,68 +333,66 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
   );
 
   const handleParamsChange = useCallback(
-    async (params: PatternRequest) => {
-      setCurrentParams(params);
-      if (methodId === "standard") {
-        setLoading(true);
-        setError(null);
-        try {
-          const result = method.compute(holes, {
-            crosses: params.crosses,
-          });
-          const rows = result.spokes.map((spoke) => ({
-            spoke: `${spoke.side === "right" ? "R" : "L"}-${String(
-              spoke.hubHole
-            ).padStart(2, "0")}`,
-            order: spoke.spokeIndex,
-            step: `Step ${spoke.group}`,
-            side: spoke.side === "right" ? "DS" : "NDS",
-            oddEvenSet: spoke.hubHole % 2 === 1 ? "Odd" : "Even",
-            k: spoke.hubHole,
-            hubHole: spoke.hubHole,
-            heads: spoke.head === "out" ? "OUT" : "IN",
-            rimHole: spoke.rimHole,
-            crossesDescribed:
-              typeof result.params.crosses === "number"
-                ? result.params.crosses === 0
-                  ? "0x radial"
-                  : `${result.params.crosses}x (over ${
-                      result.params.crosses - 1
-                    }, under 1)`
-                : "",
-            notes: "",
-            group: spoke.group,
-          }));
-          setData({
-            params,
-            derived: { spokesPerSide: holes / 2 },
-            rows,
-          });
-          setLastUpdated(new Date());
-        } catch (err) {
-          setError(err instanceof Error ? err.message : "Unexpected error");
-          setData(null);
-        } finally {
-          setLoading(false);
+    async (params: Record<string, unknown>) => {
+      const normalizedParams =
+        methodId === "schraner"
+          ? normalizeParamsForHoles(
+              {
+                ...defaultPatternRequest,
+                ...params,
+                holes,
+              } as PatternRequest,
+              holes
+            )
+          : params;
+      setParamsByMethod((prev) => {
+        const current = prev[methodId] ?? {};
+        if (shallowEqual(current, normalizedParams as Record<string, unknown>)) {
+          return prev;
         }
-        return;
-      }
+        return {
+          ...prev,
+          [methodId]: normalizedParams,
+        };
+      });
       setLoading(true);
       setError(null);
       try {
-        const response = await computePattern(params);
-        setData(response);
-        setLastUpdated(new Date());
-        trackEvent("pattern_generated", {
-          holes: params.holes,
-          crosses: params.crosses,
-          wheel_type: params.wheelType,
-          symmetry: params.symmetry,
-          invert_heads: params.invertHeads,
-          view: "builder",
+        const result = method.compute(holes, normalizedParams);
+        const rows = rowsFromResult(methodId, result);
+        setData({
+          params:
+            methodId === "schraner"
+              ? (normalizedParams as PatternRequest)
+              : {
+                holes,
+                wheelType: "rear",
+                crosses: Number(params.crosses ?? 0),
+                  symmetry: "symmetrical",
+                  invertHeads: false,
+                  startRimHole: 1,
+                  valveReference: "right_of_valve",
+                  startHubHoleDS: 1,
+                  startHubHoleNDS: 1,
+                },
+          derived: { spokesPerSide: holes / 2 },
+          rows,
         });
+        setLastUpdated(new Date());
+        if (methodId === "schraner") {
+          const typed = normalizedParams as PatternRequest;
+          trackEvent("pattern_generated", {
+            holes: typed.holes,
+            crosses: typed.crosses,
+            wheel_type: typed.wheelType,
+            symmetry: typed.symmetry,
+            invert_heads: typed.invertHeads,
+            view: "builder",
+          });
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unexpected error");
+        setData(null);
       } finally {
         setLoading(false);
       }
@@ -334,13 +401,16 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
   );
 
   const refreshPresets = useCallback(async () => {
+    if (methodId !== "schraner") {
+      return;
+    }
     try {
       const list = await listPresets();
       setPresets(list);
     } catch (err) {
       setPresetError(err instanceof Error ? err.message : "Unexpected error");
     }
-  }, []);
+  }, [methodId]);
 
   useEffect(() => {
     refreshPresets();
@@ -361,20 +431,44 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
   ]);
 
   useEffect(() => {
-    setSeedValues((prev) => normalizeParamsForHoles(prev, holes));
-    setCurrentParams((prev) => normalizeParamsForHoles(prev, holes));
-  }, [holes]);
+    if (methodId !== "schraner" || !schranerParams) {
+      return;
+    }
+    setParamsByMethod((prev) => {
+      const current = prev.schraner ?? {};
+      const normalized = schranerParams;
+      const hasDiff = Object.keys(normalized).some(
+        (key) => normalized[key as keyof PatternRequest] !== current[key]
+      );
+      if (!hasDiff) {
+        return prev;
+      }
+      return {
+        ...prev,
+        schraner: {
+          ...current,
+          ...normalized,
+        },
+      };
+    });
+  }, [methodId, schranerParams]);
 
   useEffect(() => {
     setActiveStep("all");
     setVisibleRows([]);
     setHighlightRows([]);
     setHoveredSpoke(null);
+    setSelectedPresetId(null);
+    setActivePresetParams(null);
     setData(null);
     setError(null);
     setLoading(false);
     setLastUpdated(null);
   }, [methodId]);
+
+  useEffect(() => {
+    handleParamsChange(activeParams);
+  }, [handleParamsChange, holes, methodId]);
 
   const presetSummaryLabel = useMemo(() => {
     const match = presets.find((preset) => preset.id === selectedPresetId);
@@ -385,26 +479,19 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
   }, [presets, selectedPresetId]);
 
   const valveStatus = useMemo(() => {
-    if (!data) {
+    if (!data || methodId !== "schraner") {
       return null;
     }
     return evaluateValveClearance(
       data.rows,
-      currentParams.holes,
-      currentParams.startRimHole,
-      currentParams.valveReference
+      schranerParamsSafe.holes,
+      schranerParamsSafe.startRimHole,
+      schranerParamsSafe.valveReference
     );
-  }, [currentParams, data]);
-
-  const stepGroups = useMemo(() => {
-    if (!supportsSteps) {
-      return "all" as const;
-    }
-    return groupsForStep(activeStep);
-  }, [activeStep, supportsSteps]);
+  }, [data, methodId, schranerParamsSafe]);
 
   const stepMatchRows = useMemo(() => {
-    if (!data || !supportsSteps || stepGroups === "all") {
+    if (!data || !supportsSteps || activeStep === "all") {
       return null;
     }
     const hasGroups = data.rows.some((row) => typeof row.group === "number");
@@ -412,9 +499,10 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
       return null;
     }
     return data.rows.filter(
-      (row) => typeof row.group === "number" && stepGroups.includes(row.group)
+      (row) =>
+        typeof row.group === "number" && isInActiveStep(row.group, activeStep)
     );
-  }, [data, stepGroups, supportsSteps]);
+  }, [activeStep, data, supportsSteps]);
 
   const diagramVisibleRows = useMemo(() => {
     return stepMatchRows ?? highlightRows;
@@ -431,7 +519,10 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
       setPresetError(null);
       try {
         const preset = await getPreset(id);
-        setSeedValues(preset.params);
+        setParamsByMethod((prev) => ({
+          ...prev,
+          schraner: preset.params,
+        }));
         setActivePresetParams(preset.params);
         trackEvent("preset_loaded", {
           preset_id: preset.id,
@@ -458,10 +549,13 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
   );
 
   const handleSaveAs = useCallback(async (name: string) => {
+    if (methodId !== "schraner") {
+      return;
+    }
     setPresetBusy(true);
     setPresetError(null);
     try {
-      const created = await createPreset(name, currentParams);
+      const created = await createPreset(name, schranerParamsSafe);
       await refreshPresets();
       setSelectedPresetId(created.id);
       setActivePresetParams(created.params);
@@ -484,27 +578,30 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
     } finally {
       setPresetBusy(false);
     }
-  }, [currentParams, refreshPresets, toast]);
+  }, [methodId, refreshPresets, schranerParamsSafe, toast]);
 
   const handleUpdate = useCallback(async () => {
     if (!selectedPresetId) {
       return;
     }
+    if (methodId !== "schraner") {
+      return;
+    }
     setPresetBusy(true);
     setPresetError(null);
     try {
-      await updatePreset(selectedPresetId, undefined, currentParams);
+      await updatePreset(selectedPresetId, undefined, schranerParamsSafe);
       await refreshPresets();
-      setActivePresetParams(currentParams);
+      setActivePresetParams(schranerParamsSafe);
       const presetName =
         presets.find((preset) => preset.id === selectedPresetId)?.name ??
         "Preset";
       toast({ title: "Preset saved", description: presetName });
       trackEvent("preset_saved", {
         preset_id: selectedPresetId,
-        holes: currentParams.holes,
-        crosses: currentParams.crosses,
-        wheel_type: currentParams.wheelType,
+        holes: schranerParamsSafe.holes,
+        crosses: schranerParamsSafe.crosses,
+        wheel_type: schranerParamsSafe.wheelType,
         source: "update",
       });
     } catch (err) {
@@ -518,10 +615,13 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
     } finally {
       setPresetBusy(false);
     }
-  }, [currentParams, presets, refreshPresets, selectedPresetId, toast]);
+  }, [methodId, presets, refreshPresets, schranerParamsSafe, selectedPresetId, toast]);
 
   const handleDelete = useCallback(async () => {
     if (!selectedPresetId) {
+      return;
+    }
+    if (methodId !== "schraner") {
       return;
     }
     setPresetBusy(true);
@@ -552,20 +652,22 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
     } finally {
       setPresetBusy(false);
     }
-  }, [presets, refreshPresets, selectedPresetId, toast]);
+  }, [methodId, presets, refreshPresets, selectedPresetId, toast]);
 
   useEffect(() => {
     if (printMode) {
       setResultsTab("table");
       window.setTimeout(() => window.print(), 100);
-      trackEvent("pattern_print_view", {
-        holes: currentParams.holes,
-        crosses: currentParams.crosses,
-        wheel_type: currentParams.wheelType,
-        view: "builder",
-      });
+      if (methodId === "schraner") {
+        trackEvent("pattern_print_view", {
+          holes: schranerParamsSafe.holes,
+          crosses: schranerParamsSafe.crosses,
+          wheel_type: schranerParamsSafe.wheelType,
+          view: "builder",
+        });
+      }
     }
-  }, [printMode]);
+  }, [methodId, printMode, schranerParamsSafe]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -892,43 +994,6 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  const isSchraner = methodId === "schraner";
-
-  if (!isSchraner) {
-    return (
-      <>
-        <Seo {...seo} />
-        {jsonLd ? (
-          <Helmet>
-            <script type="application/ld+json">
-              {JSON.stringify(jsonLd)}
-            </script>
-          </Helmet>
-        ) : null}
-        <section className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold">Builder</h1>
-              <p className="text-sm text-slate-600">
-                This method is not implemented yet.
-              </p>
-            </div>
-          </div>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">
-                Standard method coming soon
-              </CardTitle>
-              <CardDescription>
-                We&apos;re working on the Park-style sequence and step filters.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </section>
-      </>
-    );
-  }
-
   return (
     <>
       <Seo {...seo} />
@@ -1014,8 +1079,9 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
                   <div className="px-4 pb-4">
                     <ParamPanel
                       holes={holes}
+                      params={activeParams}
+                      paramDefs={method.params}
                       onParamsChange={handleParamsChange}
-                      initialValues={seedValues}
                       valveStatus={valveStatus ?? undefined}
                       sideFilter={sideFilter}
                       onSideFilterChange={setSideFilter}
@@ -1029,8 +1095,9 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
                 <CardContent className="pt-4">
                   <ParamPanel
                     holes={holes}
+                    params={activeParams}
+                    paramDefs={method.params}
                     onParamsChange={handleParamsChange}
-                    initialValues={seedValues}
                     valveStatus={valveStatus ?? undefined}
                     sideFilter={sideFilter}
                     onSideFilterChange={setSideFilter}
@@ -1061,13 +1128,19 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
                 )}
               </div>
               <div className="mt-1 text-xs text-slate-600">
-                {currentParams.holes}H · {currentParams.wheelType} ·{" "}
-                {currentParams.crosses}x · {currentParams.symmetry} ·{" "}
-                {currentParams.invertHeads ? "Invert heads" : "Default heads"} ·{" "}
-                startRimHole {currentParams.startRimHole} ·{" "}
-                {currentParams.valveReference.replace("_", " ")} · DS hub{" "}
-                {currentParams.startHubHoleDS} · NDS hub{" "}
-                {currentParams.startHubHoleNDS}
+                {methodId === "schraner" ? (
+                  <>
+                    {schranerParamsSafe.holes}H · {schranerParamsSafe.wheelType} ·{" "}
+                    {schranerParamsSafe.crosses}x · {schranerParamsSafe.symmetry} ·{" "}
+                    {schranerParamsSafe.invertHeads ? "Invert heads" : "Default heads"} ·{" "}
+                    startRimHole {schranerParamsSafe.startRimHole} ·{" "}
+                    {schranerParamsSafe.valveReference.replace("_", " ")} · DS hub{" "}
+                    {schranerParamsSafe.startHubHoleDS} · NDS hub{" "}
+                    {schranerParamsSafe.startHubHoleNDS}
+                  </>
+                ) : (
+                  <>{holes}H · {method.name}</>
+                )}
               </div>
             </div>
           )}
@@ -1076,7 +1149,7 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
             error={error}
             rowCount={data?.rows.length ?? null}
             lastUpdated={lastUpdated}
-            onRetry={() => handleParamsChange(currentParams)}
+            onRetry={() => handleParamsChange(activeParams)}
           />
           {error && (
             <Card className="transition-all duration-200 ease-out">
@@ -1089,7 +1162,7 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
                   type="button"
                   variant="destructive"
                   size="sm"
-                  onClick={() => handleParamsChange(currentParams)}
+                  onClick={() => handleParamsChange(activeParams)}
                 >
                   Retry
                 </Button>
@@ -1207,10 +1280,10 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
                         emphasisRows={stepMatchRows ?? undefined}
                         showStepControls={!supportsSteps}
                         analyticsContext={{
-                          holes: currentParams.holes,
-                          crosses: currentParams.crosses,
-                          wheelType: currentParams.wheelType,
-                            symmetry: currentParams.symmetry,
+                          holes: schranerParamsSafe.holes,
+                          crosses: schranerParamsSafe.crosses,
+                          wheelType: schranerParamsSafe.wheelType,
+                            symmetry: schranerParamsSafe.symmetry,
                           }}
                         />
                       </div>
@@ -1292,11 +1365,11 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
                                 }}
                               >
                                 <PatternDiagram
-                                  holes={currentParams.holes}
+                                  holes={diagramParams.holes}
                                   rows={data.rows}
                                   visibleRows={diagramVisibleRows}
-                                  startRimHole={currentParams.startRimHole}
-                                  valveReference={currentParams.valveReference}
+                                  startRimHole={diagramParams.startRimHole}
+                                  valveReference={diagramParams.valveReference}
                                   hoveredSpoke={hoveredSpoke}
                                   showLabels={showDiagramLabels}
                                   showFaintSpokes={diagramFaintSpokes}
@@ -1406,11 +1479,11 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
                                   }}
                                 >
                                   <PatternDiagram
-                                    holes={currentParams.holes}
+                                    holes={diagramParams.holes}
                                     rows={data.rows}
                                     visibleRows={diagramVisibleRows}
-                                    startRimHole={currentParams.startRimHole}
-                                    valveReference={currentParams.valveReference}
+                                    startRimHole={diagramParams.startRimHole}
+                                    valveReference={diagramParams.valveReference}
                                     hoveredSpoke={hoveredSpoke}
                                     showLabels={showDiagramLabels}
                                     showFaintSpokes={diagramFaintSpokes}
@@ -1503,10 +1576,10 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
                           emphasisRows={stepMatchRows ?? undefined}
                           showStepControls={!supportsSteps}
                           analyticsContext={{
-                            holes: currentParams.holes,
-                            crosses: currentParams.crosses,
-                            wheelType: currentParams.wheelType,
-                              symmetry: currentParams.symmetry,
+                            holes: schranerParamsSafe.holes,
+                            crosses: schranerParamsSafe.crosses,
+                            wheelType: schranerParamsSafe.wheelType,
+                              symmetry: schranerParamsSafe.symmetry,
                             }}
                           />
                         </div>

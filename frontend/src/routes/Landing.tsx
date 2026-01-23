@@ -37,7 +37,7 @@ export default function Landing() {
                 <Link to="/builder/schraner/32">Open Builder (32h)</Link>
               </Button>
               <Button asChild variant="outline" size="lg">
-                <Link to="/flow/32">Open Flowchart (32h)</Link>
+                <Link to="/flow/schraner/32">Open Flowchart (32h)</Link>
               </Button>
             </div>
             <div className="space-y-3">
@@ -56,7 +56,7 @@ export default function Landing() {
               <div className="flex flex-wrap gap-2">
                 {["16", "18", "20", "24", "28", "36"].map((holes) => (
                   <Button key={holes} asChild variant="ghost" size="sm">
-                    <Link to={`/flow/${holes}`}>Flow {holes}h</Link>
+                    <Link to={`/flow/schraner/${holes}`}>Flow {holes}h</Link>
                   </Button>
                 ))}
               </div>

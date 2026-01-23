@@ -6,45 +6,81 @@ import FlowDiagram from "../components/FlowDiagram";
 import ParamPanel from "../components/ParamPanel";
 import Seo from "../components/Seo";
 import { Button } from "@/components/ui/Button";
-import { Card, CardContent } from "@/components/ui/Card";
-import { computePattern } from "../lib/api";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { defaultPatternRequest } from "../lib/defaults";
-import { isHoleOption } from "../lib/holeOptions";
 import { normalizeParamsForHoles } from "../lib/pattern";
 import { getSeoMetadata } from "../lib/seo";
 import { trackEvent } from "../lib/analytics";
-import type { PatternRequest, PatternResponse } from "../lib/types";
+import type { PatternRequest, PatternResponse, PatternRow } from "../lib/types";
+import { getMethod, normalizeHolesForMethod, normalizeMethodId } from "../methods/registry";
 
 const zoomLevels = [0.6, 0.8, 1, 1.2, 1.4, 1.6];
+
+function defaultsForMethod(params: ReturnType<typeof getMethod>["params"]) {
+  return params.reduce<Record<string, unknown>>((acc, def) => {
+    acc[def.key] = def.default;
+    return acc;
+  }, {});
+}
+
+function shallowEqual(
+  left: Record<string, unknown>,
+  right: Record<string, unknown>
+) {
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  if (leftKeys.length !== rightKeys.length) {
+    return false;
+  }
+  return leftKeys.every((key) => left[key] === right[key]);
+}
 
 export default function Flow() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { holes: holesParam } = useParams();
+  const { holes: holesParam, method: methodParam } = useParams();
+  const methodId = normalizeMethodId(methodParam);
+  const method = getMethod(methodId);
   const parsedHoles = Number(holesParam);
-  const hasValidHolesParam = isHoleOption(parsedHoles);
-  const holes = hasValidHolesParam
-    ? parsedHoles
-    : defaultPatternRequest.holes;
+  const normalizedHoles = normalizeHolesForMethod(methodId, parsedHoles);
+  const hasValidHolesParam = Number.isFinite(parsedHoles) && parsedHoles === normalizedHoles;
+  const holes = hasValidHolesParam ? parsedHoles : normalizedHoles;
+
   const seo = useMemo(
     () => getSeoMetadata({ pathname: location.pathname, holes }),
     [location.pathname, holes]
   );
+
   const [data, setData] = useState<PatternResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [currentParams, setCurrentParams] = useState<PatternRequest>(() =>
-    normalizeParamsForHoles(defaultPatternRequest, holes)
-  );
-  const [seedValues, setSeedValues] = useState<PatternRequest>(() =>
-    normalizeParamsForHoles(defaultPatternRequest, holes)
+  const [paramsByMethod, setParamsByMethod] = useState<Record<string, Record<string, unknown>>>(
+    () => ({
+      [methodId]: defaultsForMethod(method.params),
+    })
   );
   const [sideFilter, setSideFilter] = useState<"All" | "DS" | "NDS">("All");
   const [zoomIndex, setZoomIndex] = useState(2);
   const svgRef = useRef<SVGSVGElement>(null);
 
   const zoom = zoomLevels[zoomIndex] ?? 1;
+
+  const activeParams = useMemo(() => {
+    const defaults = defaultsForMethod(method.params);
+    return { ...defaults, ...(paramsByMethod[methodId] ?? {}) };
+  }, [method.params, methodId, paramsByMethod]);
+
+  const schranerParams = useMemo(() => {
+    if (methodId !== "schraner") {
+      return null;
+    }
+    const merged = {
+      ...defaultPatternRequest,
+      ...activeParams,
+    } as PatternRequest;
+    return normalizeParamsForHoles(merged, holes);
+  }, [activeParams, holes, methodId]);
 
   const filteredRows = useMemo(() => {
     if (!data) {
@@ -56,40 +92,86 @@ export default function Flow() {
     return data.rows.filter((row) => row.side === sideFilter);
   }, [data, sideFilter]);
 
-  const handleParamsChange = useCallback(async (params: PatternRequest) => {
-    setCurrentParams(params);
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await computePattern(params);
-      setData(response);
-      setLastUpdated(new Date());
-      trackEvent("pattern_generated", {
-        holes: params.holes,
-        crosses: params.crosses,
-        wheel_type: params.wheelType,
-        symmetry: params.symmetry,
-        invert_heads: params.invertHeads,
-        view: "flow",
+  const handleParamsChange = useCallback(
+    async (params: Record<string, unknown>) => {
+      const normalizedParams =
+        methodId === "schraner"
+          ? normalizeParamsForHoles(
+              {
+                ...defaultPatternRequest,
+                ...params,
+                holes,
+              } as PatternRequest,
+              holes
+            )
+          : params;
+      setParamsByMethod((prev) => {
+        const current = prev[methodId] ?? {};
+        if (shallowEqual(current, normalizedParams as Record<string, unknown>)) {
+          return prev;
+        }
+        return {
+          ...prev,
+          [methodId]: normalizedParams,
+        };
       });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unexpected error");
-    } finally {
-      setLoading(false);
-    }
-  }, [currentParams]);
+      if (methodId !== "schraner") {
+        setData(null);
+        setError(null);
+        setLoading(false);
+        setLastUpdated(null);
+        return;
+      }
+      setLoading(true);
+      setError(null);
+      try {
+        const result = method.compute(holes, normalizedParams);
+        const rows = (result.table?.rows ?? []) as PatternRow[];
+        setData({
+          params: normalizedParams as PatternRequest,
+          derived: { spokesPerSide: holes / 2 },
+          rows,
+        });
+        setLastUpdated(new Date());
+        const typed = normalizedParams as PatternRequest;
+        trackEvent("pattern_generated", {
+          holes: typed.holes,
+          crosses: typed.crosses,
+          wheel_type: typed.wheelType,
+          symmetry: typed.symmetry,
+          invert_heads: typed.invertHeads,
+          view: "flow",
+        });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unexpected error");
+        setData(null);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [holes, method, methodId]
+  );
 
   useEffect(() => {
-    if (!holesParam || hasValidHolesParam) {
+    if (methodParam && hasValidHolesParam) {
       return;
     }
-    navigate(`/flow/${defaultPatternRequest.holes}`, { replace: true });
-  }, [hasValidHolesParam, holesParam, navigate]);
+    navigate(`/flow/${methodId}/${normalizedHoles}`, { replace: true });
+  }, [hasValidHolesParam, methodId, methodParam, navigate, normalizedHoles]);
 
   useEffect(() => {
-    setSeedValues((prev) => normalizeParamsForHoles(prev, holes));
-    setCurrentParams((prev) => normalizeParamsForHoles(prev, holes));
-  }, [holes]);
+    if (!schranerParams) {
+      return;
+    }
+    setParamsByMethod((prev) => ({
+      ...prev,
+      schraner: schranerParams,
+    }));
+  }, [schranerParams]);
+
+  useEffect(() => {
+    handleParamsChange(activeParams);
+  }, [activeParams, handleParamsChange, holes, methodId]);
 
   const handleOpenPrintView = useCallback(() => {
     const svg = svgRef.current?.outerHTML;
@@ -141,12 +223,14 @@ export default function Flow() {
     printWindow.document.write(html);
     printWindow.document.close();
     printWindow.focus();
-    trackEvent("flow_print_view", {
-      holes: currentParams.holes,
-      crosses: currentParams.crosses,
-      wheel_type: currentParams.wheelType,
-    });
-  }, [currentParams]);
+    if (schranerParams) {
+      trackEvent("flow_print_view", {
+        holes: schranerParams.holes,
+        crosses: schranerParams.crosses,
+        wheel_type: schranerParams.wheelType,
+      });
+    }
+  }, [schranerParams]);
 
   const handleDownloadSvg = useCallback(() => {
     const svg = svgRef.current?.outerHTML;
@@ -160,158 +244,152 @@ export default function Flow() {
     link.download = "wheel-lacing-flow.svg";
     link.click();
     URL.revokeObjectURL(url);
-    trackEvent("flow_download_svg", {
-      holes: currentParams.holes,
-      crosses: currentParams.crosses,
-      wheel_type: currentParams.wheelType,
-    });
-  }, []);
+    if (schranerParams) {
+      trackEvent("flow_download_svg", {
+        holes: schranerParams.holes,
+        crosses: schranerParams.crosses,
+        wheel_type: schranerParams.wheelType,
+      });
+    }
+  }, [schranerParams]);
 
-  const paramSummary = useMemo(
-    () =>
-      `${currentParams.holes}H - ${currentParams.wheelType} - ${
-        currentParams.crosses
-      }x - ${currentParams.symmetry} - ${
-        currentParams.invertHeads ? "invert heads" : "default heads"
-      }`,
-    [currentParams]
-  );
+  const paramSummary = useMemo(() => {
+    if (!schranerParams) {
+      return `${holes}H - ${method.name}`;
+    }
+    return `${schranerParams.holes}H - ${schranerParams.wheelType} - ${
+      schranerParams.crosses
+    }x - ${schranerParams.symmetry} - ${
+      schranerParams.invertHeads ? "invert heads" : "default heads"
+    }`;
+  }, [holes, method.name, schranerParams]);
 
   return (
     <>
       <Seo {...seo} />
       <section className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Flow</h1>
-          <p className="text-sm text-slate-600">
-            Step-by-step flowchart for lacing from the valve reference point.
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold">Flow</h1>
+            <p className="text-sm text-slate-600">
+              Step-by-step flowchart for lacing from the valve reference point.
+            </p>
+          </div>
+          <div className="text-xs text-slate-500">{paramSummary}</div>
         </div>
-        <div className="text-xs text-slate-500">{paramSummary}</div>
-      </div>
 
-      <div className="space-y-6 lg:grid lg:grid-cols-[380px_1fr] lg:gap-6 lg:space-y-0">
-        <aside className="space-y-4">
-          <div className="space-y-3 lg:hidden">
-            <Card>
-              <details className="group">
-                <summary className="cursor-pointer px-4 pb-3 pt-4 text-sm font-semibold text-slate-900">
-                  Parameters
-                </summary>
-                <div className="px-4 pb-4">
+        <div className="space-y-6 lg:grid lg:grid-cols-[380px_1fr] lg:gap-6 lg:space-y-0">
+          <aside className="space-y-4">
+            <div className="space-y-3 lg:hidden">
+              <Card>
+                <details className="group">
+                  <summary className="cursor-pointer px-4 pb-3 pt-4 text-sm font-semibold text-slate-900">
+                    Parameters
+                  </summary>
+                  <div className="px-4 pb-4">
+                    <ParamPanel
+                      holes={holes}
+                      params={activeParams}
+                      paramDefs={method.params}
+                      onParamsChange={handleParamsChange}
+                      sideFilter={sideFilter}
+                      onSideFilterChange={setSideFilter}
+                    />
+                  </div>
+                </details>
+              </Card>
+            </div>
+            <div className="hidden space-y-4 lg:block lg:sticky lg:top-20">
+              <Card>
+                <CardContent className="pt-4">
                   <ParamPanel
                     holes={holes}
+                    params={activeParams}
+                    paramDefs={method.params}
                     onParamsChange={handleParamsChange}
-                    initialValues={seedValues}
                     sideFilter={sideFilter}
                     onSideFilterChange={setSideFilter}
                   />
-                </div>
-              </details>
-            </Card>
-          </div>
-          <div className="hidden space-y-4 lg:block lg:sticky lg:top-20">
-            <Card>
-              <CardContent className="pt-4">
-                <ParamPanel
-                  holes={holes}
-                  onParamsChange={handleParamsChange}
-                  initialValues={seedValues}
-                  sideFilter={sideFilter}
-                  onSideFilterChange={setSideFilter}
-                />
-              </CardContent>
-            </Card>
-          </div>
-        </aside>
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setZoomIndex((idx) => Math.max(0, idx - 1))
-                }
-              >
-                Zoom out
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setZoomIndex((idx) =>
-                    Math.min(zoomLevels.length - 1, idx + 1)
-                  )
-                }
-              >
-                Zoom in
-              </Button>
-              <span className="text-xs text-slate-500">
-                {Math.round(zoom * 100)}%
-              </span>
+                </CardContent>
+              </Card>
             </div>
-            <div className="flex items-center gap-2 sm:ml-auto">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleOpenPrintView}
-              >
-                Open Print View
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={handleDownloadSvg}
-              >
-                Download SVG
-              </Button>
-            </div>
-          </div>
+          </aside>
 
-          <ComputeStatus
-            loading={loading}
-            error={error}
-            rowCount={data?.rows.length ?? null}
-            lastUpdated={lastUpdated}
-            onRetry={() => handleParamsChange(currentParams)}
-          />
+          <div className="space-y-4">
+            <ComputeStatus
+              loading={loading}
+              error={error}
+              rowCount={data?.rows.length ?? null}
+              lastUpdated={lastUpdated}
+              onRetry={() => handleParamsChange(activeParams)}
+            />
 
-          {error && (
-            <div className="rounded-md border border-slate-200 bg-white p-4 text-sm text-slate-600">
-              {error}
-            </div>
-          )}
-
-          {loading && !data && (
-            <div className="rounded-md border border-slate-200 bg-white p-4 text-sm text-slate-600">
-              Calculating flow…
-            </div>
-          )}
-
-          {data ? (
-            <div className="overflow-auto rounded-md border border-slate-200 bg-white p-4 lg:min-h-[calc(100vh-220px)]">
-              <div className="flex justify-center">
-                <FlowDiagram
-                  params={currentParams}
-                  rows={filteredRows}
-                  zoom={zoom}
-                  svgRef={svgRef}
-                />
+            {methodId !== "schraner" ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Flow not available yet</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm text-slate-600">
+                  This flowchart is only available for the Schraner method.
+                </CardContent>
+              </Card>
+            ) : data ? (
+              <Card>
+                <CardContent className="space-y-4 pt-4">
+                  <FlowDiagram
+                    params={schranerParams as PatternRequest}
+                    rows={filteredRows}
+                    svgRef={svgRef}
+                    zoom={zoom}
+                  />
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="inline-flex items-center gap-2 text-xs text-slate-500">
+                      Zoom
+                      <div className="inline-flex rounded-md border border-slate-200 bg-white">
+                        {zoomLevels.map((value, index) => (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => setZoomIndex(index)}
+                            className={`px-2 py-1 text-xs font-medium ${
+                              zoomIndex === index
+                                ? "bg-primary/10 text-foreground"
+                                : "text-slate-500 hover:bg-slate-100"
+                            }`}
+                          >
+                            {value}x
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleOpenPrintView}
+                      >
+                        Print view
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleDownloadSvg}
+                      >
+                        Download SVG
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">
+                Pick your wheel basics to generate a flowchart.
               </div>
-            </div>
-          ) : (
-            <div className="rounded-md border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">
-              Pick your wheel basics to generate a flowchart.
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      </div>
       </section>
     </>
   );

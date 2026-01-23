@@ -70,12 +70,19 @@ function LegacyBuilderRedirect() {
   return <Navigate to={`/builder/schraner/${targetHoles}`} replace />;
 }
 
+function LegacyFlowRedirect() {
+  const { holes } = useParams();
+  const targetHoles = holes ?? String(defaultPatternRequest.holes);
+  return <Navigate to={`/flow/schraner/${targetHoles}`} replace />;
+}
+
 export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const builderMatch = useMatch("/builder/:method/:holes");
   const builderLegacyMatch = useMatch("/builder/:holes");
-  const flowMatch = useMatch("/flow/:holes");
+  const flowMatch = useMatch("/flow/:method/:holes");
+  const flowLegacyMatch = useMatch("/flow/:holes");
   const builderMethod = normalizeMethodId(builderMatch?.params.method);
   const [selectedHoles, setSelectedHoles] = useState(
     defaultPatternRequest.holes
@@ -92,6 +99,7 @@ export default function App() {
       builderMatch?.params.holes ??
       builderLegacyMatch?.params.holes ??
       flowMatch?.params.holes ??
+      flowLegacyMatch?.params.holes ??
       "";
     const parsed = Number(param);
     if (Number.isNaN(parsed) || !isHoleOption(parsed)) {
@@ -109,6 +117,7 @@ export default function App() {
     builderMatch?.params.holes,
     builderLegacyMatch?.params.holes,
     flowMatch?.params.holes,
+    flowLegacyMatch?.params.holes,
   ]);
 
   useEffect(() => {
@@ -148,7 +157,10 @@ export default function App() {
     () => `/builder/${builderMethod}/${selectedHoles}`,
     [builderMethod, selectedHoles]
   );
-  const flowPath = useMemo(() => `/flow/${selectedHoles}`, [selectedHoles]);
+  const flowPath = useMemo(
+    () => `/flow/schraner/${selectedHoles}`,
+    [selectedHoles]
+  );
   const isFlowActive = Boolean(flowMatch);
 
   return (
@@ -182,7 +194,7 @@ export default function App() {
                     setSelectedHoles(next);
                     navigate(
                       isFlowActive
-                        ? `/flow/${next}`
+                        ? `/flow/schraner/${next}`
                         : `/builder/${builderMethod}/${next}`
                     );
                   }}
@@ -222,6 +234,11 @@ export default function App() {
                     <SheetClose asChild>
                       <NavLink to="/about" className={drawerLinkClass}>
                         About
+                      </NavLink>
+                    </SheetClose>
+                    <SheetClose asChild>
+                      <NavLink to="/help" className={drawerLinkClass}>
+                        Help
                       </NavLink>
                     </SheetClose>
                     <SheetClose asChild>
@@ -299,7 +316,7 @@ export default function App() {
                     setSelectedHoles(next);
                     navigate(
                       isFlowActive
-                        ? `/flow/${next}`
+                        ? `/flow/schraner/${next}`
                         : `/builder/${builderMethod}/${next}`
                     );
                   }}
@@ -320,6 +337,9 @@ export default function App() {
                 </NavLink>
                 <NavLink to="/about" className={navLinkClass}>
                   About
+                </NavLink>
+                <NavLink to="/help" className={navLinkClass}>
+                  Help
                 </NavLink>
                 <NavLink to="/readme" className={navLinkClass}>
                   Readme
@@ -359,12 +379,13 @@ export default function App() {
                 path="/flow"
                 element={
                   <Navigate
-                    to={`/flow/${defaultPatternRequest.holes}`}
+                    to={`/flow/schraner/${defaultPatternRequest.holes}`}
                     replace
                   />
                 }
               />
-              <Route path="/flow/:holes" element={<Flow />} />
+              <Route path="/flow/:holes" element={<LegacyFlowRedirect />} />
+              <Route path="/flow/:method/:holes" element={<Flow />} />
               <Route path="/help" element={<HelpHome />} />
               <Route path="/help/:method" element={<MethodHelp />} />
               <Route path="/readme" element={<Readme />} />

@@ -54,8 +54,11 @@ function builderPath(holes?: number | null, method?: string | null) {
     : `/builder/${methodSegment}`;
 }
 
-function flowPath(holes?: number | null) {
-  return isPositiveNumber(holes) ? `/flow/${holes}` : "/flow";
+function flowPath(holes?: number | null, method?: string | null) {
+  const methodSegment = method === "standard" ? "standard" : "schraner";
+  return isPositiveNumber(holes)
+    ? `/flow/${methodSegment}/${holes}`
+    : `/flow/${methodSegment}`;
 }
 
 export function getSeoMetadata({
@@ -92,17 +95,18 @@ export function getSeoMetadata({
   }
 
   if (normalizedPath.startsWith("/flow")) {
+    const methodSegment = normalizedPath.split("/")[2] ?? "schraner";
     if (isPositiveNumber(holes)) {
       return {
         title: `Wheel Weaver - Lacing Flowchart for ${holes}-hole Wheels`,
         description: `A visual flowchart of the full lacing sequence for ${holes}-hole wheels, derived from the Schraner method. Designed for use at the truing stand.`,
-        path: flowPath(holes),
+        path: flowPath(holes, methodSegment),
       };
     }
     return {
       title: FLOW_TITLE,
       description: FLOW_DESCRIPTION,
-      path: flowPath(holes),
+      path: flowPath(holes, methodSegment),
     };
   }
 

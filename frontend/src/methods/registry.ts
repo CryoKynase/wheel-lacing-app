@@ -56,3 +56,21 @@ export function groupsForStep(step: StepId): number[] | "all" {
       return "all";
   }
 }
+
+export function isInActiveStep(itemGroup: number, activeStep: StepId): boolean {
+  if (activeStep === "all") {
+    return true;
+  }
+  switch (activeStep) {
+    case "step1":
+      return itemGroup === 1;
+    case "step2":
+      return itemGroup === 2;
+    case "step3":
+      return itemGroup === 3;
+    case "step4":
+      return itemGroup === 4;
+    default:
+      return true;
+  }
+}

@@ -624,7 +624,9 @@ export default function PatternTable({
                   const isEmphasisMatch =
                     emphasisSet == null || emphasisSet.has(row.original.order);
                   const dimRow =
-                    emphasisSet != null && !isEmphasisMatch ? "opacity-40" : "";
+                    emphasisSet != null && !isEmphasisMatch && !isSelected
+                      ? "opacity-40"
+                      : "";
                   const emphasizeRow =
                     emphasisSet != null && isEmphasisMatch && !highlight && !isSelected
                       ? "bg-primary/5"

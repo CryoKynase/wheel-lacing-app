@@ -2,7 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import Seo from "../components/Seo";
 import { getSeoMetadata } from "../lib/seo";
-import { getMethod, normalizeMethodId } from "../methods/registry";
+import {
+  getMethod,
+  normalizeHolesForMethod,
+  normalizeMethodId,
+} from "../methods/registry";
 import {
   Card,
   CardContent,
@@ -37,6 +41,11 @@ export default function MethodHelp() {
       setLastHoles(parsed);
     }
   }, []);
+
+  const builderHoles = useMemo(
+    () => normalizeHolesForMethod(methodId, lastHoles),
+    [lastHoles, methodId]
+  );
 
   useEffect(() => {
     if (methodParam && methodParam === methodId) {
@@ -74,7 +83,7 @@ export default function MethodHelp() {
         <CardContent className="space-y-2 text-sm text-slate-600">
           <p>{method.shortDescription}</p>
           <Link
-            to={`/builder/${methodId}/${lastHoles}`}
+            to={`/builder/${methodId}/${builderHoles}`}
             className="text-xs text-primary underline-offset-4 hover:underline"
           >
             Back to Builder
