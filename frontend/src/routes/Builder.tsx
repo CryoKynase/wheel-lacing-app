@@ -216,7 +216,7 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
   const tableRows = visibleRows.length ? visibleRows : data?.rows ?? [];
   const supportsSteps = Boolean(method.supportsSteps);
   const hasData = Boolean(data);
-  const methodNotReady = methodId !== "schraner";
+  const methodNotReady = methodId === "standard" && !hasData;
   const methodOptions = useMemo(() => Object.values(METHODS), []);
 
   const handleCopyCsv = useCallback(
@@ -266,13 +266,50 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
   const handleParamsChange = useCallback(
     async (params: PatternRequest) => {
       setCurrentParams(params);
-    if (methodId !== "schraner") {
-      setLoading(false);
-      setError(null);
-      setData(null);
-      setLastUpdated(null);
-      return;
-    }
+      if (methodId === "standard") {
+        setLoading(true);
+        setError(null);
+        try {
+          const result = method.compute(holes, {
+            crosses: params.crosses,
+          });
+          const rows = result.spokes.map((spoke) => ({
+            spoke: `${spoke.side === "right" ? "R" : "L"}-${String(
+              spoke.hubHole
+            ).padStart(2, "0")}`,
+            order: spoke.spokeIndex,
+            step: `Step ${spoke.group}`,
+            side: spoke.side === "right" ? "DS" : "NDS",
+            oddEvenSet: spoke.hubHole % 2 === 1 ? "Odd" : "Even",
+            k: spoke.hubHole,
+            hubHole: spoke.hubHole,
+            heads: spoke.head === "out" ? "OUT" : "IN",
+            rimHole: spoke.rimHole,
+            crossesDescribed:
+              typeof result.params.crosses === "number"
+                ? result.params.crosses === 0
+                  ? "0x radial"
+                  : `${result.params.crosses}x (over ${
+                      result.params.crosses - 1
+                    }, under 1)`
+                : "",
+            notes: "",
+            group: spoke.group,
+          }));
+          setData({
+            params,
+            derived: { spokesPerSide: holes / 2 },
+            rows,
+          });
+          setLastUpdated(new Date());
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Unexpected error");
+          setData(null);
+        } finally {
+          setLoading(false);
+        }
+        return;
+      }
       setLoading(true);
       setError(null);
       try {
@@ -293,7 +330,7 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
         setLoading(false);
       }
     },
-    [methodId]
+    [holes, method, methodId]
   );
 
   const refreshPresets = useCallback(async () => {

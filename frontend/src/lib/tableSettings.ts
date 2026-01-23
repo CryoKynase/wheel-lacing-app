@@ -4,6 +4,7 @@ export type TableColumnVisibility = {
   side: boolean;
   oddEvenSet: boolean;
   k: boolean;
+  group: boolean;
   notes: boolean;
 };
 
@@ -13,6 +14,7 @@ export const defaultTableColumnVisibility: TableColumnVisibility = {
   side: true,
   oddEvenSet: true,
   k: true,
+  group: true,
   notes: true,
 };
 
@@ -22,5 +24,6 @@ export const tableColumnLabels: Record<keyof TableColumnVisibility, string> = {
   side: "Side",
   oddEvenSet: "Odd/Even set",
   k: "K",
+  group: "Group",
   notes: "Notes",
 };
