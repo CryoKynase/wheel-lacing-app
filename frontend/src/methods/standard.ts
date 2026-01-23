@@ -51,6 +51,10 @@ function rotate<T>(values: T[], offset: number) {
   return values.slice(shift).concat(values.slice(0, shift));
 }
 
+function mod(value: number, modulo: number) {
+  return ((value % modulo) + modulo) % modulo;
+}
+
 function crossesLabel(crosses: number) {
   if (crosses === 0) {
     return "0x radial";
@@ -58,20 +62,19 @@ function crossesLabel(crosses: number) {
   return `${crosses}x (over ${crosses - 1}, under 1)`;
 }
 
+function snapToParity(index: number, parity: 0 | 1, holes: number) {
+  let next = mod(index, holes);
+  if (next % 2 !== parity) {
+    next = mod(next + 1, holes);
+  }
+  return next;
+}
+
 function buildStandardPattern(holes: number, params: StandardParams) {
   if (!Number.isInteger(holes) || holes < 20 || holes % 2 !== 0) {
     throw new Error("holes must be even and >= 20");
   }
   const h = holes / 2;
-  const rimAll = Array.from({ length: holes }, (_, idx) => idx + 1);
-  const rimRight = rimAll.filter((hole) => hole % 2 === 1);
-  const rimLeft = rimAll.filter((hole) => hole % 2 === 0);
-
-  // TODO: refine valve alignment rules once hub/rim modeling is finalized.
-  const rimOffset = params.valveRule === "alignKeySpokeRightOfValve" ? 1 : 0;
-  const rimRightRot = rotate(rimRight, rimOffset);
-  const rimLeftRot = rotate(rimLeft, rimOffset);
-
   const hubRight = Array.from({ length: h }, (_, idx) => idx + 1);
   const hubLeft = Array.from({ length: h }, (_, idx) => idx + 1);
 
@@ -96,11 +99,6 @@ function buildStandardPattern(holes: number, params: StandardParams) {
     4: sideMap.other,
   };
 
-  const rimLists: Record<"right" | "left", { out: number[]; in: number[] }> = {
-    right: { out: splitEven(rimRightRot), in: splitOdd(rimRightRot) },
-    left: { out: splitEven(rimLeftRot), in: splitOdd(rimLeftRot) },
-  };
-
   const hubLists: Record<"right" | "left", { out: number[]; in: number[] }> = {
     right: { out: splitEven(hubRight), in: splitOdd(hubRight) },
     left: { out: splitEven(hubLeft), in: splitOdd(hubLeft) },
@@ -110,28 +108,44 @@ function buildStandardPattern(holes: number, params: StandardParams) {
     ? [3, 4, 1, 2]
     : [1, 2, 3, 4];
 
+  const tangentialOffset = 2 * params.crosses + 1;
+  const rimOffset = params.valveRule === "alignKeySpokeRightOfValve" ? 1 : 0;
   const spokes: SpokePlacement[] = [];
   let spokeIndex = 1;
+  const sideCounters: Record<"right" | "left", number> = {
+    right: 0,
+    left: 0,
+  };
 
   for (const group of groupOrder) {
     const side = groupSide[group];
     const head = groupHead[group];
-    const rimSequence = rimLists[side][head];
     const hubSequence = hubLists[side][head];
-    const count = Math.min(rimSequence.length, hubSequence.length);
+    const parity: 0 | 1 = side === "right" ? 1 : 0;
 
-    for (let i = 0; i < count; i += 1) {
+    for (const hubHole of hubSequence) {
+      const indexWithinSide = sideCounters[side];
+      const isTrailing = indexWithinSide % 2 === 0;
+      const dir = isTrailing ? 1 : -1;
+      const sideFlip = side === "left" ? -1 : 1;
+      const signed = dir * sideFlip * tangentialOffset;
+
+      // TODO: refine valve alignment rules once hub/rim modeling is finalized.
+      const baseIndex = (hubHole - 1) * 2 + parity + rimOffset;
+      const rimIndex = snapToParity(baseIndex + signed, parity, holes);
+
       spokes.push({
         spokeIndex,
         side,
         head,
         group: group as 1 | 2 | 3 | 4,
-        hubHole: hubSequence[i],
-        rimHole: rimSequence[i],
+        hubHole,
+        rimHole: rimIndex + 1,
         crosses: params.crosses,
-        // TODO: add leading/trailing classification once spoke direction is modeled.
+        leadingTrailing: isTrailing ? "trailing" : "leading",
       });
       spokeIndex += 1;
+      sideCounters[side] += 1;
     }
   }
 

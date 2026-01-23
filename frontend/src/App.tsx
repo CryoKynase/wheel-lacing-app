@@ -170,7 +170,7 @@ export default function App() {
           <div className="px-4 py-3 sm:px-6 sm:py-4">
             <div className="flex items-center gap-3 sm:hidden">
               <Link
-                to={builderPath}
+                to="/"
                 className="flex items-center gap-2"
                 aria-label="WheelWeaver home"
               >
@@ -289,7 +289,7 @@ export default function App() {
             <div className="hidden items-center gap-3 sm:grid sm:grid-cols-[1fr_auto_1fr]">
               <div className="flex flex-wrap items-center gap-4">
                 <Link
-                  to={builderPath}
+                  to="/"
                   className="flex items-center gap-2"
                   aria-label="WheelWeaver home"
                 >

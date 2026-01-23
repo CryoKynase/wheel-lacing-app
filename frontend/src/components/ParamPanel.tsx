@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { MethodParamDef } from "../methods/types";
 import {
   Accordion,
@@ -29,6 +29,18 @@ function buildDefaults(defs: MethodParamDef[]) {
   }, {});
 }
 
+function shallowEqual(
+  left: Record<string, unknown>,
+  right: Record<string, unknown>
+) {
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  if (leftKeys.length !== rightKeys.length) {
+    return false;
+  }
+  return leftKeys.every((key) => left[key] === right[key]);
+}
+
 export default function ParamPanel({
   holes,
   params,
@@ -42,14 +54,23 @@ export default function ParamPanel({
   const [localParams, setLocalParams] = useState<Record<string, unknown>>(
     () => ({ ...defaults, ...params })
   );
+  const syncingRef = useRef(false);
 
   useEffect(() => {
+    syncingRef.current = true;
     setLocalParams({ ...defaults, ...params });
   }, [defaults, params]);
 
   useEffect(() => {
+    if (syncingRef.current) {
+      syncingRef.current = false;
+      return;
+    }
+    if (shallowEqual(localParams, params)) {
+      return;
+    }
     onParamsChange(localParams);
-  }, [localParams, onParamsChange]);
+  }, [localParams, onParamsChange, params]);
 
   const handleReset = () => {
     setLocalParams({ ...defaults });
