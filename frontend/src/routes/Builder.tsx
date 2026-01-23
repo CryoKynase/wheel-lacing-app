@@ -41,12 +41,15 @@ import {
   updatePreset,
 } from "../lib/api";
 import { defaultPatternRequest } from "../lib/defaults";
-import { isHoleOption } from "../lib/holeOptions";
 import { normalizeParamsForHoles } from "../lib/pattern";
 import { getSeoMetadata, getSoftwareApplicationJsonLd } from "../lib/seo";
 import type { TableColumnVisibility } from "../lib/tableSettings";
 import { evaluateValveClearance } from "../lib/valveClearance";
 import { trackEvent } from "../lib/analytics";
+import {
+  normalizeHolesForMethod,
+  normalizeMethodId,
+} from "../methods/registry";
 import type {
   PatternRequest,
   PatternResponse,
@@ -130,12 +133,16 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-  const { holes: holesParam } = useParams();
+  const { holes: holesParam, method: methodParam } = useParams();
   const parsedHoles = Number(holesParam);
-  const hasValidHolesParam = isHoleOption(parsedHoles);
+  const methodId = normalizeMethodId(methodParam);
+  const normalizedHoles = normalizeHolesForMethod(methodId, parsedHoles);
+  const hasValidMethodParam = methodParam === methodId;
+  const hasValidHolesParam =
+    Number.isFinite(parsedHoles) && normalizedHoles === parsedHoles;
   const holes = hasValidHolesParam
     ? parsedHoles
-    : fallbackHoles ?? defaultPatternRequest.holes;
+    : fallbackHoles ?? normalizedHoles;
   const seo = useMemo(
     () => getSeoMetadata({ pathname: location.pathname, holes }),
     [location.pathname, holes]
@@ -273,11 +280,18 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
   }, [refreshPresets]);
 
   useEffect(() => {
-    if (!holesParam || hasValidHolesParam) {
+    if (methodParam && hasValidHolesParam && hasValidMethodParam) {
       return;
     }
-    navigate(`/builder/${defaultPatternRequest.holes}`, { replace: true });
-  }, [hasValidHolesParam, holesParam, navigate]);
+    navigate(`/builder/${methodId}/${normalizedHoles}`, { replace: true });
+  }, [
+    hasValidHolesParam,
+    hasValidMethodParam,
+    methodId,
+    methodParam,
+    navigate,
+    normalizedHoles,
+  ]);
 
   useEffect(() => {
     setSeedValues((prev) => normalizeParamsForHoles(prev, holes));
@@ -324,7 +338,7 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
           wheel_type: preset.params.wheelType,
         });
         if (preset.params.holes !== holes) {
-          navigate(`/builder/${preset.params.holes}`);
+          navigate(`/builder/${methodId}/${preset.params.holes}`);
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : "Unexpected error";
@@ -338,7 +352,7 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
         setPresetBusy(false);
       }
     },
-    [holes, navigate, toast]
+    [holes, methodId, navigate, toast]
   );
 
   const handleSaveAs = useCallback(async (name: string) => {
@@ -775,6 +789,43 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
+
+  const isSchraner = methodId === "schraner";
+
+  if (!isSchraner) {
+    return (
+      <>
+        <Seo {...seo} />
+        {jsonLd ? (
+          <Helmet>
+            <script type="application/ld+json">
+              {JSON.stringify(jsonLd)}
+            </script>
+          </Helmet>
+        ) : null}
+        <section className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold">Builder</h1>
+              <p className="text-sm text-slate-600">
+                This method is not implemented yet.
+              </p>
+            </div>
+          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">
+                Standard method coming soon
+              </CardTitle>
+              <CardDescription>
+                We&apos;re working on the Park-style sequence and step filters.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </section>
+      </>
+    );
+  }
 
   return (
     <>

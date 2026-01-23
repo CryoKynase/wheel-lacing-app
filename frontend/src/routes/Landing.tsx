@@ -34,7 +34,7 @@ export default function Landing() {
             </div>
             <div className="flex flex-wrap gap-3">
               <Button asChild size="lg">
-                <Link to="/builder/32">Open Builder (32h)</Link>
+                <Link to="/builder/schraner/32">Open Builder (32h)</Link>
               </Button>
               <Button asChild variant="outline" size="lg">
                 <Link to="/flow/32">Open Flowchart (32h)</Link>
@@ -47,7 +47,9 @@ export default function Landing() {
               <div className="flex flex-wrap gap-2">
                 {["16", "18", "20", "24", "28", "36"].map((holes) => (
                   <Button key={holes} asChild variant="outline" size="sm">
-                    <Link to={`/builder/${holes}`}>Builder {holes}h</Link>
+                    <Link to={`/builder/schraner/${holes}`}>
+                      Builder {holes}h
+                    </Link>
                   </Button>
                 ))}
               </div>

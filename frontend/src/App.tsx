@@ -8,6 +8,7 @@ import {
   useLocation,
   useMatch,
   useNavigate,
+  useParams,
 } from "react-router-dom";
 import Builder from "./routes/Builder";
 import Landing from "./routes/Landing";
@@ -40,6 +41,7 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
+import { normalizeMethodId } from "./methods/registry";
 
 const linkBase =
   "block rounded-md border border-transparent px-3 py-2 text-sm font-medium transition";
@@ -60,11 +62,19 @@ const drawerLinkClass = ({ isActive }: { isActive: boolean }) =>
       : "border-transparent text-muted-foreground hover:bg-accent/40 hover:text-foreground"
   }`;
 
+function LegacyBuilderRedirect() {
+  const { holes } = useParams();
+  const targetHoles = holes ?? String(defaultPatternRequest.holes);
+  return <Navigate to={`/builder/schraner/${targetHoles}`} replace />;
+}
+
 export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
-  const builderMatch = useMatch("/builder/:holes");
+  const builderMatch = useMatch("/builder/:method/:holes");
+  const builderLegacyMatch = useMatch("/builder/:holes");
   const flowMatch = useMatch("/flow/:holes");
+  const builderMethod = normalizeMethodId(builderMatch?.params.method);
   const [selectedHoles, setSelectedHoles] = useState(
     defaultPatternRequest.holes
   );
@@ -76,7 +86,11 @@ export default function App() {
   );
 
   useEffect(() => {
-    const param = builderMatch?.params.holes ?? flowMatch?.params.holes ?? "";
+    const param =
+      builderMatch?.params.holes ??
+      builderLegacyMatch?.params.holes ??
+      flowMatch?.params.holes ??
+      "";
     const parsed = Number(param);
     if (Number.isNaN(parsed) || !isHoleOption(parsed)) {
       if (!param) {
@@ -89,7 +103,11 @@ export default function App() {
       return;
     }
     setSelectedHoles(parsed);
-  }, [builderMatch?.params.holes, flowMatch?.params.holes]);
+  }, [
+    builderMatch?.params.holes,
+    builderLegacyMatch?.params.holes,
+    flowMatch?.params.holes,
+  ]);
 
   useEffect(() => {
     window.localStorage.setItem(STORED_HOLES_KEY, String(selectedHoles));
@@ -125,8 +143,8 @@ export default function App() {
   }, [location.pathname, location.search]);
 
   const builderPath = useMemo(
-    () => `/builder/${selectedHoles}`,
-    [selectedHoles]
+    () => `/builder/${builderMethod}/${selectedHoles}`,
+    [builderMethod, selectedHoles]
   );
   const flowPath = useMemo(() => `/flow/${selectedHoles}`, [selectedHoles]);
   const isFlowActive = Boolean(flowMatch);
@@ -160,7 +178,11 @@ export default function App() {
                       return;
                     }
                     setSelectedHoles(next);
-                    navigate(isFlowActive ? `/flow/${next}` : `/builder/${next}`);
+                    navigate(
+                      isFlowActive
+                        ? `/flow/${next}`
+                        : `/builder/${builderMethod}/${next}`
+                    );
                   }}
                 >
                   {holeOptions.map((holes) => (
@@ -273,7 +295,11 @@ export default function App() {
                       return;
                     }
                     setSelectedHoles(next);
-                    navigate(isFlowActive ? `/flow/${next}` : `/builder/${next}`);
+                    navigate(
+                      isFlowActive
+                        ? `/flow/${next}`
+                        : `/builder/${builderMethod}/${next}`
+                    );
                   }}
                 >
                   {holeOptions.map((holes) => (
@@ -314,13 +340,17 @@ export default function App() {
                 path="/builder"
                 element={
                   <Navigate
-                    to={`/builder/${defaultPatternRequest.holes}`}
+                    to={`/builder/schraner/${defaultPatternRequest.holes}`}
                     replace
                   />
                 }
               />
               <Route
                 path="/builder/:holes"
+                element={<LegacyBuilderRedirect />}
+              />
+              <Route
+                path="/builder/:method/:holes"
                 element={<Builder tableColumns={tableColumns} />}
               />
               <Route

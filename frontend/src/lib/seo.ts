@@ -43,8 +43,11 @@ function isPositiveNumber(value?: number | null) {
   return typeof value === "number" && Number.isFinite(value) && value > 0;
 }
 
-function builderPath(holes?: number | null) {
-  return isPositiveNumber(holes) ? `/builder/${holes}` : "/builder";
+function builderPath(holes?: number | null, method?: string | null) {
+  const methodSegment = method === "standard" ? "standard" : "schraner";
+  return isPositiveNumber(holes)
+    ? `/builder/${methodSegment}/${holes}`
+    : `/builder/${methodSegment}`;
 }
 
 function flowPath(holes?: number | null) {
@@ -69,17 +72,18 @@ export function getSeoMetadata({
   }
 
   if (normalizedPath.startsWith("/builder")) {
+    const methodSegment = normalizedPath.split("/")[2] ?? "schraner";
     if (isPositiveNumber(holes)) {
       return {
         title: `Wheel Weaver - ${holes}-hole Lacing Pattern Builder`,
         description: `Instant spoke-by-spoke lacing table for ${holes}-hole wheels. Clear odd/even steps, heads-in/heads-out guidance, and printable results.`,
-        path: builderPath(holes),
+        path: builderPath(holes, methodSegment),
       };
     }
     return {
       title: BUILDER_TITLE,
       description: BUILDER_DESCRIPTION,
-      path: builderPath(holes),
+      path: builderPath(holes, methodSegment),
     };
   }
 
