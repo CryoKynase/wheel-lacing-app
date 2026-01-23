@@ -197,22 +197,42 @@ export const standardMethod: LacingMethod = {
     { id: "step4", label: "Step 4", groups: [4] },
   ],
   help: {
-    title: "Standard (Park-style) method",
+    title: "Standard method (4-step / spoke groups)",
     sections: [
       {
-        heading: "Overview",
+        heading: "What this method is",
         body:
-          "The standard method groups spokes into four phases. Each phase places a consistent subset of spokes so the wheel stays organized as you lace.",
+          "This is a straight-ahead, shop-friendly way to lace by grouping spokes into four repeatable steps. Each step is a predictable set of spokes, so you always know what comes next and can verify the wheel before moving on.",
       },
       {
-        heading: "Four-step flow",
+        heading: "Before you start",
         body:
-          "Step 1 through Step 4 each correspond to a spoke group. The step filter will isolate those groups in the diagram and table once compute is enabled.",
+          "Confirm your hole count, cross count, and which side you want to start on. Sort spokes by heads-in vs heads-out if that helps you stay organized. Keep your nipples ready and thread each spoke a few turns so engagement is consistent.",
       },
       {
-        heading: "Coming soon",
+        heading: "The four steps (spoke groups)",
         body:
-          "Standard method calculations are in progress. The builder layout is ready, but spokes and tables will appear once the compute module is wired up.",
+          "There are four spoke groups: start-side heads-out, opposite-side heads-out, start-side heads-in, opposite-side heads-in. The Builder step toggle mirrors those groups so you can focus on one batch at a time.",
+      },
+      {
+        heading: "Valve-hole clearance",
+        body:
+          "Use a key spoke near the valve to create space for the pump head. The goal is a clean window between spokes at the valve hole. If the valve area looks crowded, revisit your starting side or valve rule and recheck rim indexing.",
+      },
+      {
+        heading: "Crossing and weaving",
+        body:
+          "Crossing is the repeatable part: each spoke crosses the same number of neighbors before heading to the rim. Weaving should feel consistent within a group. If one spoke seems off, stop and compare it to the previous spoke in the same group.",
+      },
+      {
+        heading: "Checklist before tensioning",
+        body:
+          "All spokes should be installed, each nipple should have similar thread engagement, and spoke heads should face the intended direction. Spin the wheel to confirm rim hole sequence and that the valve area is clear before you start bringing up tension.",
+      },
+      {
+        heading: "Common mistakes",
+        body:
+          "Mixing head-in/head-out groups, skipping a rim hole, or swapping sides mid-group are the big ones. Use the Step 1–4 filter to compare your wheel against the table and diagram, and correct issues before they get locked in by tension.",
       },
     ],
   },

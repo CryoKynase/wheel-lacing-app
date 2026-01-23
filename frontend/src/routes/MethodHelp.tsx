@@ -1,5 +1,5 @@
-import { useEffect, useMemo } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import Seo from "../components/Seo";
 import { getSeoMetadata } from "../lib/seo";
 import { getMethod, normalizeMethodId } from "../methods/registry";
@@ -25,6 +25,18 @@ export default function MethodHelp() {
   const methodId = normalizeMethodId(methodParam);
   const method = getMethod(methodId);
   const seo = getSeoMetadata({ pathname: location.pathname });
+  const [lastHoles, setLastHoles] = useState(32);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const stored = window.localStorage.getItem("wheelweaver:selectedHoles");
+    const parsed = Number(stored);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      setLastHoles(parsed);
+    }
+  }, []);
 
   useEffect(() => {
     if (methodParam && methodParam === methodId) {
@@ -61,6 +73,12 @@ export default function MethodHelp() {
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-slate-600">
           <p>{method.shortDescription}</p>
+          <Link
+            to={`/builder/${methodId}/${lastHoles}`}
+            className="text-xs text-primary underline-offset-4 hover:underline"
+          >
+            Back to Builder
+          </Link>
         </CardContent>
       </Card>
 
