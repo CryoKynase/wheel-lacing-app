@@ -187,7 +187,7 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
   );
   const [diagramZoom, setDiagramZoom] = useState(1);
   const [diagramPan, setDiagramPan] = useState({ x: 0, y: 0 });
-  const [diagramLocked, setDiagramLocked] = useState(true);
+  const [diagramLocked, setDiagramLocked] = useState(false);
   const [diagramLookFrom, setDiagramLookFrom] = useState<"DS" | "NDS">(
     readStoredLookFrom
   );
