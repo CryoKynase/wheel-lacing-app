@@ -344,6 +344,36 @@ export const schranerMethod: LacingMethod = {
       step: 1,
     },
   ],
+  help: {
+    title: "Schraner method",
+    sections: [
+      {
+        heading: "Overview",
+        body:
+          "Schraner is a workshop-style sequence that anchors the build at the valve with two reference spokes, then fills in odd and even sets in a repeatable order. It is designed to reduce mistakes by keeping a consistent spoke order.",
+      },
+      {
+        heading: "Reference spokes",
+        body:
+          "Two drive-side reference spokes are placed at the valve (left and right of the valve hole). These establish the rim indexing for the rest of the build.",
+      },
+      {
+        heading: "Odd and even sets",
+        body:
+          "After references, the method fills the remaining odd holes on each flange, then weaves in the even set. This keeps crossings consistent and easier to verify.",
+      },
+      {
+        heading: "Valve reference",
+        body:
+          "The valve reference determines whether your start rim hole is right or left of the valve. The tables and diagrams adjust automatically.",
+      },
+      {
+        heading: "Heads in or out",
+        body:
+          "Heads-in/out describes whether the spoke heads sit inside or outside the flange. Use the invert heads toggle if your hub or build preference differs.",
+      },
+    ],
+  },
   compute: (holes, params): PatternResult => {
     const resolved = resolveParams(params);
     validateInputs(holes, resolved.crosses);

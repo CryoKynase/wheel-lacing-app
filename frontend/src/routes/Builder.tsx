@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 
 import ParamPanel from "../components/ParamPanel";
 import PatternDiagram from "../components/PatternDiagram";
 import PatternTable from "../components/PatternTable";
 import PresetBar from "../components/PresetBar";
-import SchranerIntro from "../components/SchranerIntro";
 import ComputeStatus from "../components/ComputeStatus";
 import Seo from "../components/Seo";
 import {
@@ -913,6 +912,9 @@ export default function Builder({ tableColumns, fallbackHoles }: BuilderProps) {
           {presetSummaryLabel ? (
             <div>{`Preset: ${presetSummaryLabel}`}</div>
           ) : null}
+          <Button asChild variant="outline" size="sm" className="h-8 text-xs">
+            <Link to={`/help/${method.id}`}>Method help</Link>
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="h-8 text-xs">

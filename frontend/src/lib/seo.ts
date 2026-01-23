@@ -32,6 +32,10 @@ const ABOUT_TITLE = "About Wheel Weaver";
 const ABOUT_DESCRIPTION =
   "Wheel Weaver helps wheel builders lace faster and with fewer mistakes using structured, repeatable spoke sequences.";
 
+const HELP_TITLE = "Wheel Weaver Help";
+const HELP_DESCRIPTION =
+  "Wheelbuilding concepts, glossary, and method-specific guidance for Wheel Weaver.";
+
 const SETTINGS_TITLE = "Wheel Weaver Settings";
 const SETTINGS_DESCRIPTION = "Theme, preferences, and app options.";
 
@@ -99,6 +103,23 @@ export function getSeoMetadata({
       title: FLOW_TITLE,
       description: FLOW_DESCRIPTION,
       path: flowPath(holes),
+    };
+  }
+
+  if (normalizedPath.startsWith("/help")) {
+    const segments = normalizedPath.split("/").filter(Boolean);
+    const methodSegment = segments[1];
+    if (methodSegment) {
+      return {
+        title: `Wheel Weaver Help - ${methodSegment} method`,
+        description: HELP_DESCRIPTION,
+        path: normalizedPath,
+      };
+    }
+    return {
+      title: HELP_TITLE,
+      description: HELP_DESCRIPTION,
+      path: "/help",
     };
   }
 

@@ -65,5 +65,9 @@ export interface LacingMethod {
   supportsPhases?: boolean;
   steps?: { id: StepId; label: string; groups?: number[] }[];
   diagramMode?: "classic" | "realistic" | "engineer";
+  help?: {
+    title: string;
+    sections: { heading: string; body: string }[];
+  };
   compute: (holes: number, params: Record<string, unknown>) => PatternResult;
 }

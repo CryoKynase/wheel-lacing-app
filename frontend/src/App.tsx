@@ -18,6 +18,8 @@ import About from "./routes/About";
 import Settings from "./routes/Settings";
 import Privacy from "./routes/Privacy";
 import NotFound from "./routes/NotFound";
+import HelpHome from "./routes/HelpHome";
+import MethodHelp from "./routes/MethodHelp";
 import { defaultPatternRequest } from "./lib/defaults";
 import { holeOptions, isHoleOption } from "./lib/holeOptions";
 import {
@@ -363,6 +365,8 @@ export default function App() {
                 }
               />
               <Route path="/flow/:holes" element={<Flow />} />
+              <Route path="/help" element={<HelpHome />} />
+              <Route path="/help/:method" element={<MethodHelp />} />
               <Route path="/readme" element={<Readme />} />
               <Route path="/about" element={<About />} />
               <Route path="/privacy" element={<Privacy />} />
